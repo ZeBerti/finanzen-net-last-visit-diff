@@ -22,7 +22,7 @@ setTimeout(() => {
 // Depotnummer mit DATABASE_KEY verbinden:
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
-const pkdepnr = urlParams.get('pkdepnr')
+const pkdepnr = urlParams.get('pkdepnr') || 'default';
 let DATABASE_KEY = "finanzen_net_extension_" + pkdepnr;
 
 // functions ######
@@ -31,6 +31,9 @@ let DATABASE_KEY = "finanzen_net_extension_" + pkdepnr;
 
 // Ändere die CSS-Klassen aller Child-Elemente eines DOM-Elements
 function changeClassOfChildren(parentDom, cssBefore, cssAfter) {
+  if (!parentDom) {
+    return;
+  }
   // Finde alle untergeordneten Elemente des parentDom
   const children = parentDom.children;
 
@@ -95,53 +98,62 @@ function createNewHeaderDiv() {
 
 function loadFromDatabase(databaseKey) {
   console.log(`Loading from database '${databaseKey}'...`);
-  // Load database from localStorage
-  entries = JSON.parse(localStorage.getItem(databaseKey)) || [];
-  return entries;
+  return readFromStorage(databaseKey, []);
 }
 
 
-// 1. Suche nach dem div-Element mit dem Text "Perf. gesamt"
-const perfGesamtDiv = findDivWithText("Perf. gesamt");
-
-// 2. Lade das parent div-Element
-const parentDiv = perfGesamtDiv.parentNode;
-
-// 3. Hole die aktuellen Portfolio Werte absolut und in prozent
-const performanceEuro = extractNumber(findElementWithText(parentDiv, "span", "EUR").innerHTML);
-const performancePercentage = extractNumber(findElementWithText(parentDiv, "span", "%").innerHTML);
-const gesamtwert = extractNumber(findDivWithText("Gesamtwert").parentNode.children[1].innerHTML);
-
-// 4. lade die letzten Gesamt-Portfolio-Werte absolut und in prozent
-const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
-console.log("Tupel perf.: " + tupelPerformanceLast);
-console.log(tupelPerformanceLast);
 let performanceEuroLast = 0;
 let performancePercentageLast = 0;
-let lastTimestamp = "Never"
-console.log("tupel length: " + tupelPerformanceLast.length);
-if (tupelPerformanceLast && tupelPerformanceLast.length > 0) {
-  performanceEuroLast = tupelPerformanceLast[0].share_price;
-  performancePercentageLast = tupelPerformanceLast[0].percentage;
-  lastTimestamp = tupelPerformanceLast[0].timestamp;
+let lastTimestamp = "Never";
+
+function initPortfolioDiff() {
+  const perfGesamtDiv = findDivWithText("Perf. gesamt");
+  if (!perfGesamtDiv?.parentNode) {
+    console.warn("Perf. gesamt section not found. Skipping extension rendering.");
+    return;
+  }
+
+  const parentDiv = perfGesamtDiv.parentNode;
+  const performanceEuroElement = findElementWithText(parentDiv, "span", "EUR");
+  const performancePercentageElement = findElementWithText(parentDiv, "span", "%");
+  const gesamtwertLabel = findDivWithText("Gesamtwert");
+  const gesamtwertElement = gesamtwertLabel?.parentNode?.children?.[1];
+
+  if (!performanceEuroElement || !performancePercentageElement || !gesamtwertElement) {
+    console.warn("Required portfolio summary elements not found. Skipping extension rendering.");
+    return;
+  }
+
+  const performanceEuro = extractNumber(performanceEuroElement.innerHTML);
+  const performancePercentage = extractNumber(performancePercentageElement.innerHTML);
+  const gesamtwert = extractNumber(gesamtwertElement.innerHTML);
+
+  const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
+  console.log("Tupel perf.: " + tupelPerformanceLast);
+  console.log(tupelPerformanceLast);
+  console.log("tupel length: " + tupelPerformanceLast.length);
+
+  const lastEntry = tupelPerformanceLast.find((entry) => entry?.name === "Gesamt") || tupelPerformanceLast[0];
+  if (lastEntry) {
+    performanceEuroLast = lastEntry.share_price ?? 0;
+    performancePercentageLast = lastEntry.percentage ?? 0;
+    lastTimestamp = lastEntry.timestamp ?? "Never";
+  }
+
+  saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0);
+
+  const headerTable = parentDiv.parentNode;
+  if (headerTable) {
+    changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
+    headerTable.appendChild(createNewHeaderDiv());
+  }
+
+  addNewColumnHeader();
+
+  console.log("finanzen.net extension DEBUG");
+  console.log("performanceEuro: " + performanceEuro + " (" + performanceEuroLast + ")");
+  console.log("performance%: " + performancePercentage + " (" + performancePercentageLast + ")");
+  console.log("");
 }
 
-// 5. Den aktuellen Stand speichern
-saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0);
-
-// 6. Die Tabelle unter "Depotwert" enger machen
-const headerTable = parentDiv.parentNode;
-changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
-
-// 7. Füge einen weiteren Bereich in die Header Tabelle ein
-// Erstelle ein neues div-Element für das Child und füge das neue Child-Element zum headerTable hinzu
-headerTable.appendChild(createNewHeaderDiv());
-
-// 8. Die Tabelle mit den Einzelwerten erweitern um eine Spalte
-addNewColumnHeader();
-
-//DEBUG
-console.log("finanzen.net extension DEBUG");
-console.log("performanceEuro: " + performanceEuro + " (" + performanceEuroLast + ")");
-console.log("performance%: " + performancePercentage + " (" + performancePercentageLast + ")");
-console.log("");
+initPortfolioDiff();

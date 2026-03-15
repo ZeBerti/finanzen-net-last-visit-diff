@@ -1,5 +1,25 @@
 //# import { createNewHeaderDiv } from './tableExpansion.js';
 
+function readFromStorage(key, fallbackValue) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallbackValue;
+  } catch (error) {
+    console.error(`Failed to read localStorage key '${key}'`, error);
+    return fallbackValue;
+  }
+}
+
+function writeToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`Failed to write localStorage key '${key}'`, error);
+    return false;
+  }
+}
+
 function getCurrentTimestamp() {
   const now = new Date();
   return now.toISOString();
@@ -57,6 +77,9 @@ function formatPercent (num) {
 
 // Suche nach dem Element mit einem Text, der im Text des Elements enthalten ist und keine untergeordneten Elemente hat
 function findElementWithText(parentElement, domType, text) {
+  if (!parentElement) {
+    return null;
+  }
   const elements = parentElement.getElementsByTagName(domType);
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
@@ -77,9 +100,9 @@ function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, s
   //const name = document.getElementById('name').value;
   const timestamp = getCurrentTimestamp();
   //const sharePrice = document.getElementById('sharePrice').value;
-  let database = JSON.parse(localStorage.getItem(databaseKey)) || [];
+  let database = readFromStorage(databaseKey, []);
 
-  console.log('Saving to database "${databaseKey}"');
+  console.log(`Saving to database '${databaseKey}'`);
 
   // Check if productName already exists in database
   const existingEntryIndex = database.findIndex(entry => entry.name === productName);
@@ -102,10 +125,10 @@ function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, s
       wertentwSeitKaufAbs: wertentwSeitKaufAbs
     };
     database.push(entry);
-    console.log(`New entry '${name}${productName}' added to database.`);
+    console.log(`New entry '${productName}' added to database.`);
   }
 
     // Save database to localStorage
-    localStorage.setItem(databaseKey, JSON.stringify(database));
+    writeToStorage(databaseKey, database);
 
 }

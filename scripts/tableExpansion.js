@@ -23,6 +23,10 @@ function customLog(content, level) {
 function addNewColumnHeader() {
     // Find the table element
     var table = document.querySelector('.table--content-right');
+    if (!table) {
+        customLog("Portfolio table not found", "WARN");
+        return;
+    }
     let productNameList=[];
 
     // Find the header cell containing "± gesamt"
@@ -43,31 +47,40 @@ function addNewColumnHeader() {
     customLog("targetColumnIndex: " + targetColumnIndex)
 
     // If the target column with "± gesamt" is found, add a new column
-    if (targetColumnIndex !== -1) {
+    if (targetColumnIndex !== -1 && thGesamt) {
 
         // die erste Row ist der Header der Tabelle
         var rows = table.querySelectorAll('thead .table__tr');
         var tbodyRows = table.querySelectorAll('tbody .table__tr');
 
         let row = rows[0];
+        if (!row) {
+            customLog("Table header row not found", "WARN");
+            return;
+        }
 
         var thNew = thGesamt.cloneNode(true);
-        thNew.querySelectorAll('th a')[0].innerHTML = "± zuletzt";
-        thNew.querySelectorAll('th a')[0].title = "Wertentwicklung dieser Position in Euro seit letztem Abruf";
-        thNew.querySelectorAll('th a')[0].removeAttribute("href");
+        const headerLinks = thNew.querySelectorAll('th a');
+        if (headerLinks.length < 3) {
+            customLog("Expected header links for duplicated column not found", "WARN");
+            return;
+        }
+        headerLinks[0].innerHTML = "± zuletzt";
+        headerLinks[0].title = "Wertentwicklung dieser Position in Euro seit letztem Abruf";
+        headerLinks[0].removeAttribute("href");
 
-        thNew.querySelectorAll('th a')[1].innerHTML = "% zuletzt";
-        thNew.querySelectorAll('th a')[1].title = "Wertentwicklung dieser Position in % seit letztem Abruf";
-        thNew.querySelectorAll('th a')[1].removeAttribute("href");
+        headerLinks[1].innerHTML = "% zuletzt";
+        headerLinks[1].title = "Wertentwicklung dieser Position in % seit letztem Abruf";
+        headerLinks[1].removeAttribute("href");
 
-        thNew.querySelectorAll('th a')[2].innerHTML = "W.-entw. seit letz. Bes.";
-        thNew.querySelectorAll('th a')[2].title = "Gesamte Wertentwicklung aller Positionen in Euro seit letztem Abruf";
-        thNew.querySelectorAll('th a')[2].removeAttribute("href");
+        headerLinks[2].innerHTML = "W.-entw. seit letz. Bes.";
+        headerLinks[2].title = "Gesamte Wertentwicklung aller Positionen in Euro seit letztem Abruf";
+        headerLinks[2].removeAttribute("href");
 
 
         row.insertBefore(thNew, thGesamt);
 
-        sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
+        const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
 
         // ____________________________
         // alle positionen loopen und Tabelle je Zeile erweitern
@@ -75,21 +88,32 @@ function addNewColumnHeader() {
 
             // ignore "info-elements"
             if(positionRow.querySelectorAll("td").length > 2) {
+                const cells = positionRow.querySelectorAll("td");
+                if (cells.length <= 4) {
+                    customLog("Skipping row with unexpected cell count", "WARN");
+                    return;
+                }
 
                 // index 1: name der aktie
-                let shareNameElement = positionRow.querySelectorAll("td")[1]?.querySelectorAll("a")[0];
+                let shareNameElement = cells[1]?.querySelectorAll("a")[0];
                 let shareName = shareNameElement ? shareNameElement.innerHTML : "N/A";
                 productNameList.push(shareName);
-                let numberOfProduct = productNameList.filter(product => product === "shareName").length;
+                let numberOfProduct = productNameList.filter(product => product === shareName).length;
 
                 //index 2: Aktueller Kurs / Wert
-                let aktuellerKurs = extractNumber(positionRow.querySelectorAll("td")[2].querySelectorAll("strong")[0]?.innerHTML);
-                //aktuellerKurs = aktuellerKurs === undefined ? 0 : aktuellerKurs;
+                let aktuellerKurs = extractNumber(cells[2].querySelectorAll("strong")[0]?.innerHTML);
 
                 // index 4: gesamt-Wert. hier muss ein before hin
-                let gesamtEuro = extractNumber(positionRow.querySelectorAll("td")[4].querySelectorAll("span")[0].innerHTML);
-                let gesamtProzent = extractNumber(positionRow.querySelectorAll("td")[4].querySelectorAll("span")[1].innerHTML);
-                let gesamtDomSeitKauf = extractNumber(positionRow.querySelectorAll("td")[4].querySelectorAll("span")[2].innerHTML);
+                const gesamtCell = cells[4];
+                const gesamtSpans = gesamtCell.querySelectorAll("span");
+                if (gesamtSpans.length < 3) {
+                    customLog(`Skipping row '${shareName}' because summary spans are missing`, "WARN");
+                    return;
+                }
+                let gesamtEuro = extractNumber(gesamtSpans[0].innerHTML);
+                let gesamtProzent = extractNumber(gesamtSpans[1].innerHTML);
+                let gesamtDomSeitKauf = extractNumber(gesamtSpans[2].innerHTML);
+                const lastShareEntry = sharesZuletzt.get(shareName);
 
                 if(positionRow.getElementsByClassName("message--warning").length === 0) {
 
@@ -99,37 +123,36 @@ function addNewColumnHeader() {
                     customLog(shareName + " saved to " + DATABASE_KEY);
 
                     // Diff anzeigen von zuletzt und aktuell
-                    if(sharesZuletzt != undefined) {
+                    if(lastShareEntry) {
                         customLog(shareName + " sharesZuletzt.get(shareName).share_price) - extractNumber(gesamtEuro)");
-                        customLog(sharesZuletzt.get(shareName).share_price + " - " + gesamtEuro + " = ") ;
-                        customLog(extractNumber(sharesZuletzt.get(shareName).share_price) - extractNumber(gesamtEuro));
+                        customLog(lastShareEntry.share_price + " - " + gesamtEuro + " = ") ;
+                        customLog(extractNumber(lastShareEntry.share_price) - extractNumber(gesamtEuro));
                     }
                 }
 
-                let tdCopy = positionRow.querySelectorAll("td")[4].cloneNode(true);
+                let tdCopy = gesamtCell.cloneNode(true);
 
-    if(sharesZuletzt != undefined && shareName != undefined) {
-        customLog("lllll. sharesZuletzt ist undefined. Dumping im folgenden");
-        customLog("ShareZuletzt/ShareZuletzt.get.aktuellerKurs/Mit extractNum:");
+                if (!lastShareEntry) {
+                    customLog(`No previous entry found for '${shareName}', skipping diff column`, "INFO");
+                    return;
+                }
 
-        customLog("share Name: " + (sharesZuletzt.get(shareName)?.name ?? "nicht gefunden"));
+                const tdCopySpans = tdCopy.querySelectorAll('span');
+                if (tdCopySpans.length < 3) {
+                    customLog(`Skipping row '${shareName}' because cloned diff cell is incomplete`, "WARN");
+                    return;
+                }
 
-        customLog(sharesZuletzt.get(shareName));
-        customLog(sharesZuletzt.get(shareName)?.aktuellerKurs)|| customLog("Err abgefangen") ;
-        customLog(extractNumber(sharesZuletzt.get(shareName).aktuellerKurs)) || customLog("Err abgefangen") ;
-        customLog(aktuellerKurs);
-    }
+                let aktuellerKursZuletzt = extractNumber(lastShareEntry.aktuellerKurs) - aktuellerKurs;
+                tdCopySpans[0].innerHTML = formatEuro(aktuellerKursZuletzt);
+                tdCopySpans[1].innerHTML = formatPercent(extractNumber(lastShareEntry.percentage) - gesamtProzent);
+                tdCopySpans[2].innerHTML = formatEuro(extractNumber(lastShareEntry.wertentwSeitKaufAbs) - gesamtDomSeitKauf);
 
-                let aktuellerKurs_zuletzt = sharesZuletzt.get(shareName).aktuellerKurs - aktuellerKurs;
-                tdCopy.querySelectorAll('span')[0].innerHTML = formatEuro(aktuellerKurs_zuletzt);
-                tdCopy.querySelectorAll('span')[1].innerHTML = formatPercent(sharesZuletzt.get(shareName).percentage - gesamtProzent);
-                tdCopy.querySelectorAll('span')[2].innerHTML = formatEuro(sharesZuletzt.get(shareName).seitKauf - gesamtDomSeitKauf);
-
-                tdCopy.setAttribute("title", "Aktueller Kurs: " + sharesZuletzt.get(shareName).aktuellerKurs + " - " + aktuellerKurs +
-                 "\nProzent: " + formatPercent(sharesZuletzt.get(shareName).percentage + " - " + gesamtProzent) +
-                 "\nSeit Kauf: " + formatPercent(sharesZuletzt.get(shareName).seitKauf + " - " + gesamtDomSeitKauf) +
-                 "\nZuletzt aktualisiert: " + sharesZuletzt.get(shareName).timestamp);
-                positionRow.insertBefore(tdCopy, positionRow.querySelectorAll("td")[4]);
+                tdCopy.setAttribute("title", "Aktueller Kurs: " + extractNumber(lastShareEntry.aktuellerKurs) + " - " + aktuellerKurs +
+                 "\nProzent: " + formatPercent(extractNumber(lastShareEntry.percentage) - gesamtProzent) +
+                 "\nSeit Kauf: " + formatEuro(extractNumber(lastShareEntry.wertentwSeitKaufAbs) - gesamtDomSeitKauf) +
+                 "\nZuletzt aktualisiert: " + (lastShareEntry.timestamp || "unbekannt"));
+                positionRow.insertBefore(tdCopy, gesamtCell);
 
             }
 
@@ -150,4 +173,3 @@ function addNewColumnHeader() {
 
     }
 }
-
