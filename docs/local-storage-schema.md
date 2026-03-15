@@ -9,6 +9,7 @@
 ## Aktuelles Format
 - Der Wert unter dem Key ist ein JSON-Array.
 - Jeder Eintrag repraesentiert den zuletzt bekannten Stand fuer `Gesamt` oder eine einzelne Position.
+- Es wird nur noch dieses Schema unterstuetzt.
 
 ## Eintragsstruktur
 ```json
@@ -16,11 +17,11 @@
   "key": "depot-entry:17752047",
   "name": "Gesamt oder Positionsname",
   "productIndex": 1,
-  "aktuellerKurs": 123.45,
+  "currentValue": 123.45,
   "timestamp": "2026-03-15T21:00:00.000Z",
-  "share_price": 456.78,
-  "percentage": 3.21,
-  "wertentwSeitKaufAbs": 89.01
+  "absolutePerformance": 456.78,
+  "percentagePerformance": 3.21,
+  "sinceBuyValue": 89.01
 }
 ```
 
@@ -37,25 +38,26 @@
 - `productIndex`
   - Auftretensindex eines sichtbaren Namens innerhalb der aktuellen Tabelle.
   - Wird nur als Fallback und Zusatzkontext gespeichert.
-- `aktuellerKurs`
+- `currentValue`
   - Aktueller Kurs bzw. aktueller Einzelwert der Position aus der Tabelle.
   - Beim Eintrag `Gesamt` wird hier der aktuelle Gesamtwert des Depots gespeichert.
 - `timestamp`
   - Zeitpunkt des letzten Speicherns in ISO-8601.
-- `share_price`
-  - Historisch unklar benannter Wert.
-  - Enthalten ist aktuell der absolute Performance-Wert der Position bzw. des Gesamtdepots zum letzten Abruf.
-- `percentage`
+- `absolutePerformance`
+  - Absoluter Performance-Wert der Position bzw. des Gesamtdepots zum letzten Abruf.
+- `percentagePerformance`
   - Prozentuale Performance der Position bzw. des Gesamtdepots zum letzten Abruf.
-- `wertentwSeitKaufAbs`
+- `sinceBuyValue`
   - Absolute Wertentwicklung seit Kauf fuer die Position.
   - Beim Eintrag `Gesamt` wird aktuell `0` gespeichert.
 
 ## Bekannte Schwaechen
-- `share_price` ist semantisch missverstaendlich benannt.
-- `name` ist fuer Positionen kein robuster Schluessel, wenn Eintraege nicht eindeutig sind.
 - Fallbacks ueber `isin + Index` oder `name + Index` sind weniger robust als `pkdepdatennr`.
 - Das Schema ist historisch gewachsen und noch nicht als bewusstes Datenmodell konsolidiert.
+
+## Hinweis zu Alt-Daten
+- Aeltere `localStorage`-Eintraege im frueheren Format werden nicht mehr ausgewertet.
+- Nach dieser Umstellung kann der erste Aufruf der Depotseite deshalb wie ein Erstbesuch wirken.
 
 ## Aktuelle Nutzung im Code
 - Lesen und Schreiben:
@@ -66,6 +68,5 @@
   - `scripts/tableExpansion.js`
 
 ## Geplante Richtung
-- Feldnamen fachlich klarziehen.
 - Semantik zwischen Gesamtdepot und Einzelpositionen expliziter trennen.
 - Fallback-Matching nur als Notbetrieb behandeln und im UI bzw. Logging klar kennzeichnen.

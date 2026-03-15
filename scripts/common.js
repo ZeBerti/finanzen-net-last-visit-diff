@@ -21,31 +21,52 @@ function writeToStorage(key, value) {
 }
 
 function getStorageEntryKey(entry) {
-  if (entry?.key) {
-    return entry.key;
+  return entry?.key || null;
+}
+
+function normalizeStorageEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
   }
 
-  if (entry?.name) {
-    return `legacy:${entry.name}`;
+  const normalizedEntry = {
+    key: getStorageEntryKey(entry),
+    name: entry.name || "Unbekannt",
+    productIndex: entry.productIndex ?? 0,
+    currentValue: extractNumber(entry.currentValue),
+    absolutePerformance: extractNumber(entry.absolutePerformance),
+    percentagePerformance: extractNumber(entry.percentagePerformance),
+    sinceBuyValue: extractNumber(entry.sinceBuyValue),
+    timestamp: entry.timestamp || null
+  };
+
+  return normalizedEntry.key ? normalizedEntry : null;
+}
+
+function normalizeStorageEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
   }
 
-  return null;
+  return entries
+    .map(normalizeStorageEntry)
+    .filter(Boolean);
 }
 
 function getEntryAbsolutePerformance(entry) {
-  return extractNumber(entry?.share_price);
+  return extractNumber(entry?.absolutePerformance);
 }
 
 function getEntryPercentagePerformance(entry) {
-  return extractNumber(entry?.percentage);
+  return extractNumber(entry?.percentagePerformance);
 }
 
 function getEntryCurrentValue(entry) {
-  return extractNumber(entry?.aktuellerKurs);
+  return extractNumber(entry?.currentValue);
 }
 
 function getEntryValueSinceBuy(entry) {
-  return extractNumber(entry?.wertentwSeitKaufAbs);
+  return extractNumber(entry?.sinceBuyValue);
 }
 
 function calculateDiffValues(previousEntry, currentValues) {
@@ -54,7 +75,7 @@ function calculateDiffValues(previousEntry, currentValues) {
   }
 
   return {
-    currentValueDiff: getEntryCurrentValue(previousEntry) - extractNumber(currentValues?.aktuellerKurs),
+    currentValueDiff: getEntryCurrentValue(previousEntry) - extractNumber(currentValues?.currentValue),
     absolutePerformanceDiff: getEntryAbsolutePerformance(previousEntry) - extractNumber(currentValues?.absolutePerformance),
     percentageDiff: getEntryPercentagePerformance(previousEntry) - extractNumber(currentValues?.percentagePerformance),
     sinceBuyDiff: getEntryValueSinceBuy(previousEntry) - extractNumber(currentValues?.sinceBuyValue)
@@ -139,13 +160,17 @@ function findElementWithText(parentElement, domType, text) {
  productName: produkt name, e.g. alphabet
  productIndex: there may be several <productName> entries. This variable counts it (e.g. 'alphabet' -> 2)
 **/
-function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, sharePrice, percentage, wertentwSeitKaufAbs, entryKey) {
+ function saveToDatabase(databaseKey, productName, productIndex, currentValue, absolutePerformance, percentagePerformance, sinceBuyValue, entryKey) {
 
   //const name = document.getElementById('name').value;
   const timestamp = getCurrentTimestamp();
-  //const sharePrice = document.getElementById('sharePrice').value;
-  let database = readFromStorage(databaseKey, []);
-  const resolvedEntryKey = entryKey || `legacy:${productName}`;
+  let database = normalizeStorageEntries(readFromStorage(databaseKey, []));
+  const resolvedEntryKey = entryKey;
+
+  if (!resolvedEntryKey) {
+    console.error(`Missing storage key for database '${databaseKey}' and product '${productName}'`);
+    return;
+  }
 
   console.log(`Saving to database '${databaseKey}'`);
 
@@ -154,11 +179,12 @@ function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, s
   if (existingEntryIndex !== -1) {
     // Update existing entry
     database[existingEntryIndex].key = resolvedEntryKey;
-    database[existingEntryIndex].aktuellerKurs = aktuellerKurs;
-    database[existingEntryIndex].share_price = sharePrice;
-    database[existingEntryIndex].percentage = percentage;
+    database[existingEntryIndex].name = productName;
+    database[existingEntryIndex].currentValue = extractNumber(currentValue);
+    database[existingEntryIndex].absolutePerformance = extractNumber(absolutePerformance);
+    database[existingEntryIndex].percentagePerformance = extractNumber(percentagePerformance);
     database[existingEntryIndex].timestamp = timestamp;
-    database[existingEntryIndex].wertentwSeitKaufAbs = wertentwSeitKaufAbs;
+    database[existingEntryIndex].sinceBuyValue = extractNumber(sinceBuyValue);
     database[existingEntryIndex].productIndex = productIndex;
     console.log(`Entry '${productName}' updated in database.`);
   } else {
@@ -167,11 +193,11 @@ function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, s
       key: resolvedEntryKey,
       name: productName,
       productIndex: productIndex,
-      aktuellerKurs: aktuellerKurs,
+      currentValue: extractNumber(currentValue),
       timestamp: timestamp,
-      share_price: sharePrice,
-      percentage: percentage,
-      wertentwSeitKaufAbs: wertentwSeitKaufAbs
+      absolutePerformance: extractNumber(absolutePerformance),
+      percentagePerformance: extractNumber(percentagePerformance),
+      sinceBuyValue: extractNumber(sinceBuyValue)
     };
     database.push(entry);
     console.log(`New entry '${productName}' added to database.`);

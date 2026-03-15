@@ -98,7 +98,7 @@ function createNewHeaderDiv() {
 
 function loadFromDatabase(databaseKey) {
   console.log(`Loading from database '${databaseKey}'...`);
-  return readFromStorage(databaseKey, []);
+  return normalizeStorageEntries(readFromStorage(databaseKey, []));
 }
 
 
@@ -134,7 +134,6 @@ function initPortfolioDiff() {
   console.log("tupel length: " + tupelPerformanceLast.length);
 
   const lastEntry = tupelPerformanceLast.find((entry) => entry?.key === "portfolio:gesamt")
-    || tupelPerformanceLast.find((entry) => entry?.name === "Gesamt")
     || tupelPerformanceLast[0];
   if (lastEntry) {
     performanceEuroLast = getEntryAbsolutePerformance(lastEntry);

@@ -166,7 +166,7 @@ function addNewColumnHeader() {
                 let gesamtDomSeitKauf = extractNumber(gesamtSpans[2].innerHTML);
                 const lastShareEntry = sharesZuletzt.get(positionStorageKey);
                 const diffValues = calculateDiffValues(lastShareEntry, {
-                    aktuellerKurs: aktuellerKurs,
+                    currentValue: aktuellerKurs,
                     absolutePerformance: gesamtEuro,
                     percentagePerformance: gesamtProzent,
                     sinceBuyValue: gesamtDomSeitKauf
