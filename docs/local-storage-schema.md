@@ -1,0 +1,71 @@
+# local-storage-schema.md
+
+## Zweck
+- Die Extension speichert den zuletzt bekannten Depotstand pro Depot in `localStorage`.
+- Grundlage ist ein Key pro Depotnummer:
+  - `finanzen_net_extension_<pkdepnr>`
+  - Falls keine Depotnummer in der URL erkannt wird: `finanzen_net_extension_default`
+
+## Aktuelles Format
+- Der Wert unter dem Key ist ein JSON-Array.
+- Jeder Eintrag repraesentiert den zuletzt bekannten Stand fuer `Gesamt` oder eine einzelne Position.
+
+## Eintragsstruktur
+```json
+{
+  "key": "depot-entry:17752047",
+  "name": "Gesamt oder Positionsname",
+  "productIndex": 1,
+  "aktuellerKurs": 123.45,
+  "timestamp": "2026-03-15T21:00:00.000Z",
+  "share_price": 456.78,
+  "percentage": 3.21,
+  "wertentwSeitKaufAbs": 89.01
+}
+```
+
+## Feldbedeutung
+- `name`
+  - Anzeige- und Fachname des Eintrags.
+  - Fuer das Gesamtdepot wird aktuell `Gesamt` verwendet.
+- `key`
+  - Interner Persistenzschluessel fuer eindeutiges Matching.
+  - Fuer das Gesamtdepot aktuell `portfolio:gesamt`.
+  - Fuer einzelne Positionen bevorzugt `depot-entry:<pkdepdatennr>`.
+  - Falls diese ID im DOM nicht verfuegbar ist, wird auf `isin:<isin>#<n>` und zuletzt `name:<name>#<n>` zurueckgefallen.
+  - Die beiden Fallbacks gelten ausdruecklich als degradierter Modus und nicht als gleichwertige Identifikation.
+- `productIndex`
+  - Auftretensindex eines sichtbaren Namens innerhalb der aktuellen Tabelle.
+  - Wird nur als Fallback und Zusatzkontext gespeichert.
+- `aktuellerKurs`
+  - Aktueller Kurs bzw. aktueller Einzelwert der Position aus der Tabelle.
+  - Beim Eintrag `Gesamt` wird hier der aktuelle Gesamtwert des Depots gespeichert.
+- `timestamp`
+  - Zeitpunkt des letzten Speicherns in ISO-8601.
+- `share_price`
+  - Historisch unklar benannter Wert.
+  - Enthalten ist aktuell der absolute Performance-Wert der Position bzw. des Gesamtdepots zum letzten Abruf.
+- `percentage`
+  - Prozentuale Performance der Position bzw. des Gesamtdepots zum letzten Abruf.
+- `wertentwSeitKaufAbs`
+  - Absolute Wertentwicklung seit Kauf fuer die Position.
+  - Beim Eintrag `Gesamt` wird aktuell `0` gespeichert.
+
+## Bekannte Schwaechen
+- `share_price` ist semantisch missverstaendlich benannt.
+- `name` ist fuer Positionen kein robuster Schluessel, wenn Eintraege nicht eindeutig sind.
+- Fallbacks ueber `isin + Index` oder `name + Index` sind weniger robust als `pkdepdatennr`.
+- Das Schema ist historisch gewachsen und noch nicht als bewusstes Datenmodell konsolidiert.
+
+## Aktuelle Nutzung im Code
+- Lesen und Schreiben:
+  - `scripts/common.js`
+- Gesamtdepot lesen und rendern:
+  - `scripts/content.js`
+- Positionsdaten lesen, speichern und Differenzen rendern:
+  - `scripts/tableExpansion.js`
+
+## Geplante Richtung
+- Feldnamen fachlich klarziehen.
+- Semantik zwischen Gesamtdepot und Einzelpositionen expliziter trennen.
+- Fallback-Matching nur als Notbetrieb behandeln und im UI bzw. Logging klar kennzeichnen.

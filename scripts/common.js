@@ -20,6 +20,47 @@ function writeToStorage(key, value) {
   }
 }
 
+function getStorageEntryKey(entry) {
+  if (entry?.key) {
+    return entry.key;
+  }
+
+  if (entry?.name) {
+    return `legacy:${entry.name}`;
+  }
+
+  return null;
+}
+
+function getEntryAbsolutePerformance(entry) {
+  return extractNumber(entry?.share_price);
+}
+
+function getEntryPercentagePerformance(entry) {
+  return extractNumber(entry?.percentage);
+}
+
+function getEntryCurrentValue(entry) {
+  return extractNumber(entry?.aktuellerKurs);
+}
+
+function getEntryValueSinceBuy(entry) {
+  return extractNumber(entry?.wertentwSeitKaufAbs);
+}
+
+function calculateDiffValues(previousEntry, currentValues) {
+  if (!previousEntry) {
+    return null;
+  }
+
+  return {
+    currentValueDiff: getEntryCurrentValue(previousEntry) - extractNumber(currentValues?.aktuellerKurs),
+    absolutePerformanceDiff: getEntryAbsolutePerformance(previousEntry) - extractNumber(currentValues?.absolutePerformance),
+    percentageDiff: getEntryPercentagePerformance(previousEntry) - extractNumber(currentValues?.percentagePerformance),
+    sinceBuyDiff: getEntryValueSinceBuy(previousEntry) - extractNumber(currentValues?.sinceBuyValue)
+  };
+}
+
 function getCurrentTimestamp() {
   const now = new Date();
   return now.toISOString();
@@ -39,7 +80,10 @@ function findDivWithText(text) {
 function createMap (data) {
     let nameMap = new Map();
     data.forEach(obj => {
-        nameMap.set(obj.name, obj);
+        const key = getStorageEntryKey(obj);
+        if (key) {
+          nameMap.set(key, obj);
+        }
     });
     return nameMap;
 }
@@ -95,29 +139,34 @@ function findElementWithText(parentElement, domType, text) {
  productName: produkt name, e.g. alphabet
  productIndex: there may be several <productName> entries. This variable counts it (e.g. 'alphabet' -> 2)
 **/
-function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, sharePrice, percentage, wertentwSeitKaufAbs) {
+function saveToDatabase(databaseKey, productName, productIndex, aktuellerKurs, sharePrice, percentage, wertentwSeitKaufAbs, entryKey) {
 
   //const name = document.getElementById('name').value;
   const timestamp = getCurrentTimestamp();
   //const sharePrice = document.getElementById('sharePrice').value;
   let database = readFromStorage(databaseKey, []);
+  const resolvedEntryKey = entryKey || `legacy:${productName}`;
 
   console.log(`Saving to database '${databaseKey}'`);
 
   // Check if productName already exists in database
-  const existingEntryIndex = database.findIndex(entry => entry.name === productName);
+  const existingEntryIndex = database.findIndex(entry => getStorageEntryKey(entry) === resolvedEntryKey);
   if (existingEntryIndex !== -1) {
     // Update existing entry
+    database[existingEntryIndex].key = resolvedEntryKey;
     database[existingEntryIndex].aktuellerKurs = aktuellerKurs;
     database[existingEntryIndex].share_price = sharePrice;
     database[existingEntryIndex].percentage = percentage;
     database[existingEntryIndex].timestamp = timestamp;
     database[existingEntryIndex].wertentwSeitKaufAbs = wertentwSeitKaufAbs;
+    database[existingEntryIndex].productIndex = productIndex;
     console.log(`Entry '${productName}' updated in database.`);
   } else {
     // Create a new entry
     const entry = {
+      key: resolvedEntryKey,
       name: productName,
+      productIndex: productIndex,
       aktuellerKurs: aktuellerKurs,
       timestamp: timestamp,
       share_price: sharePrice,

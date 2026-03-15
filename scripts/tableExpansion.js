@@ -19,6 +19,52 @@ function customLog(content, level) {
     }
 }
 
+function extractDepotEntryId(positionRow) {
+    const sellLink = positionRow.querySelector('a[href*="pkdepdatennr="]');
+    if (!sellLink) {
+        return null;
+    }
+
+    try {
+        const sellUrl = new URL(sellLink.href, window.location.origin);
+        return sellUrl.searchParams.get('pkdepdatennr');
+    } catch (error) {
+        customLog(`Failed to parse depot entry id: ${error}`, "WARN");
+        return null;
+    }
+}
+
+function extractInstrumentIsin(positionRow) {
+    const isinInput = positionRow.querySelector('input[name="stISIN"]');
+    return isinInput?.value || null;
+}
+
+function resolvePositionIdentity(positionRow, shareName, productIndex) {
+    const depotEntryId = extractDepotEntryId(positionRow);
+    if (depotEntryId) {
+        return {
+            storageKey: `depot-entry:${depotEntryId}`,
+            mode: "stable",
+            reason: "pkdepdatennr"
+        };
+    }
+
+    const isin = extractInstrumentIsin(positionRow);
+    if (isin) {
+        return {
+            storageKey: `isin:${isin}#${productIndex}`,
+            mode: "degraded",
+            reason: "isin"
+        };
+    }
+
+    return {
+        storageKey: `name:${shareName}#${productIndex}`,
+        mode: "degraded",
+        reason: "name-index"
+    };
+}
+
 
 function addNewColumnHeader() {
     // Find the table element
@@ -99,6 +145,11 @@ function addNewColumnHeader() {
                 let shareName = shareNameElement ? shareNameElement.innerHTML : "N/A";
                 productNameList.push(shareName);
                 let numberOfProduct = productNameList.filter(product => product === shareName).length;
+                const positionIdentity = resolvePositionIdentity(positionRow, shareName, numberOfProduct);
+                const positionStorageKey = positionIdentity.storageKey;
+                if (positionIdentity.mode === "degraded") {
+                    customLog(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`, "WARN");
+                }
 
                 //index 2: Aktueller Kurs / Wert
                 let aktuellerKurs = extractNumber(cells[2].querySelectorAll("strong")[0]?.innerHTML);
@@ -113,20 +164,26 @@ function addNewColumnHeader() {
                 let gesamtEuro = extractNumber(gesamtSpans[0].innerHTML);
                 let gesamtProzent = extractNumber(gesamtSpans[1].innerHTML);
                 let gesamtDomSeitKauf = extractNumber(gesamtSpans[2].innerHTML);
-                const lastShareEntry = sharesZuletzt.get(shareName);
+                const lastShareEntry = sharesZuletzt.get(positionStorageKey);
+                const diffValues = calculateDiffValues(lastShareEntry, {
+                    aktuellerKurs: aktuellerKurs,
+                    absolutePerformance: gesamtEuro,
+                    percentagePerformance: gesamtProzent,
+                    sinceBuyValue: gesamtDomSeitKauf
+                });
 
                 if(positionRow.getElementsByClassName("message--warning").length === 0) {
 
                     customLog("gesamtEur/%/wertentwSeitKaufAbs: " + gesamtEuro + " " + gesamtProzent + " " + gesamtDomSeitKauf);
 
-                    saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf);
+                    saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf, positionStorageKey);
                     customLog(shareName + " saved to " + DATABASE_KEY);
 
                     // Diff anzeigen von zuletzt und aktuell
                     if(lastShareEntry) {
-                        customLog(shareName + " sharesZuletzt.get(shareName).share_price) - extractNumber(gesamtEuro)");
-                        customLog(lastShareEntry.share_price + " - " + gesamtEuro + " = ") ;
-                        customLog(extractNumber(lastShareEntry.share_price) - extractNumber(gesamtEuro));
+                        customLog(shareName + " previous absolute performance - current absolute performance");
+                        customLog(getEntryAbsolutePerformance(lastShareEntry) + " - " + gesamtEuro + " = ") ;
+                        customLog(diffValues?.absolutePerformanceDiff);
                     }
                 }
 
@@ -143,14 +200,14 @@ function addNewColumnHeader() {
                     return;
                 }
 
-                let aktuellerKursZuletzt = extractNumber(lastShareEntry.aktuellerKurs) - aktuellerKurs;
-                tdCopySpans[0].innerHTML = formatEuro(aktuellerKursZuletzt);
-                tdCopySpans[1].innerHTML = formatPercent(extractNumber(lastShareEntry.percentage) - gesamtProzent);
-                tdCopySpans[2].innerHTML = formatEuro(extractNumber(lastShareEntry.wertentwSeitKaufAbs) - gesamtDomSeitKauf);
+                tdCopySpans[0].innerHTML = formatEuro(diffValues.currentValueDiff);
+                tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
+                tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
 
-                tdCopy.setAttribute("title", "Aktueller Kurs: " + extractNumber(lastShareEntry.aktuellerKurs) + " - " + aktuellerKurs +
-                 "\nProzent: " + formatPercent(extractNumber(lastShareEntry.percentage) - gesamtProzent) +
-                 "\nSeit Kauf: " + formatEuro(extractNumber(lastShareEntry.wertentwSeitKaufAbs) - gesamtDomSeitKauf) +
+                tdCopy.setAttribute("title", "Aktueller Kurs: " + getEntryCurrentValue(lastShareEntry) + " - " + aktuellerKurs +
+                 "\nProzent: " + formatPercent(diffValues.percentageDiff) +
+                 "\nSeit Kauf: " + formatEuro(diffValues.sinceBuyDiff) +
+                 "\nMatching: " + (positionIdentity.mode === "stable" ? "stabil via pkdepdatennr" : `degradiert via ${positionIdentity.reason}`) +
                  "\nZuletzt aktualisiert: " + (lastShareEntry.timestamp || "unbekannt"));
                 positionRow.insertBefore(tdCopy, gesamtCell);
 

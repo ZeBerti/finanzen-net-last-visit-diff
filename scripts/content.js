@@ -133,14 +133,16 @@ function initPortfolioDiff() {
   console.log(tupelPerformanceLast);
   console.log("tupel length: " + tupelPerformanceLast.length);
 
-  const lastEntry = tupelPerformanceLast.find((entry) => entry?.name === "Gesamt") || tupelPerformanceLast[0];
+  const lastEntry = tupelPerformanceLast.find((entry) => entry?.key === "portfolio:gesamt")
+    || tupelPerformanceLast.find((entry) => entry?.name === "Gesamt")
+    || tupelPerformanceLast[0];
   if (lastEntry) {
-    performanceEuroLast = lastEntry.share_price ?? 0;
-    performancePercentageLast = lastEntry.percentage ?? 0;
+    performanceEuroLast = getEntryAbsolutePerformance(lastEntry);
+    performancePercentageLast = getEntryPercentagePerformance(lastEntry);
     lastTimestamp = lastEntry.timestamp ?? "Never";
   }
 
-  saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0);
+  saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
 
   const headerTable = parentDiv.parentNode;
   if (headerTable) {
