@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Entry</title>
+</head>
+<body>
+
+<h2>Database Entry Form</h2>
+<label for="dbName">Database Name:</label>
+<input type="text" id="dbName" value="finanzen-net-last-share-prices" autocomplete="off"><br><br>
+<label for="name">Name:</label>
+<input type="text" id="name" placeholder="Enter Name" autocomplete="off"><br><br>
+<label for="sharePrice">Share Price:</label>
+<input type="text" id="sharePrice" placeholder="Enter Share Price"><br><br>
+<button onclick="saveToDatabase()">Save to Database</button>
+<button onclick="loadFromDatabase()">Load from Database</button>
+<button onclick="deleteAllEntries()">Delete All Entries</button>
+
+<div id="databaseEntries">
+    <h2 id="databaseTitle"></h2>
+    <ul id="entryList"></ul>
+</div>
+
+<script>
+    // Load database from localStorage if available
+    let databaseNameInput = document.getElementById('dbName');
+    let databaseName = databaseNameInput.value;
+    let database = JSON.parse(localStorage.getItem(databaseName)) || [];
+    let currentId = database.length > 0 ? database[database.length - 1].id + 1 : 1;
+
+    function saveToDatabase() {
+        console.error("Es wurde die function saveToDatabase aufgerufen. Es ist unklar (20241117) warum es dieses file test.html gibt");
+      databaseName = databaseNameInput.value;
+
+      const name = document.getElementById('name').value;
+      const timestamp = getCurrentTimestamp();
+      const sharePrice = document.getElementById('sharePrice').value;
+
+      console.log('Saving to database...');
+
+      // Check if name already exists in database
+      const existingEntryIndex = database.findIndex(entry => entry.name === name);
+      if (existingEntryIndex !== -1) {
+        // Update existing entry
+        database[existingEntryIndex].share_price = sharePrice;
+        database[existingEntryIndex].timestamp = timestamp;
+        console.log(`Entry '${name}' updated in database.`);
+      } else {
+        // Create a new entry
+        const entry = {
+          id: currentId++,
+          name: name,
+          timestamp: timestamp,
+          share_price: sharePrice
+        };
+        database.push(entry);
+        console.log(`New entry '${name}' added to database.`);
+      }
+
+      // Clear input fields
+      document.getElementById('name').value = '';
+      document.getElementById('sharePrice').value = '';
+
+      // Save database to localStorage
+      saveDatabaseToLocalStorage();
+
+      // Update the DOM with database entries
+      displayDatabaseEntries();
+    }
+
+    function loadFromDatabase() {
+      // Get the current value of databaseName from the DOM
+      databaseName = databaseNameInput.value;
+      console.log(`Loading from database '${databaseName}'...`);
+      // Load database from localStorage
+      database = JSON.parse(localStorage.getItem(databaseName)) || [];
+      // Update currentId
+      currentId = database.length > 0 ? database[database.length - 1].id + 1 : 1;
+      // Update the DOM with database entries
+      displayDatabaseEntries();
+    }
+
+    function getCurrentTimestamp() {
+      const now = new Date();
+      return now.toISOString();
+    }
+
+    function displayDatabaseEntries() {
+      const entryList = document.getElementById('entryList');
+      entryList.innerHTML = ''; // Clear previous entries
+
+      // Display database title
+      document.getElementById('databaseTitle').textContent = `Database: ${databaseName}`;
+
+      // Loop through the database and display each entry
+      database.forEach(entry => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `ID: ${entry.id}, Name: ${entry.name}, Timestamp: ${entry.timestamp}, Share Price: ${entry.share_price}`;
+        entryList.appendChild(listItem);
+      });
+    }
+
+    function deleteAllEntries() {
+      database = [];
+      currentId = 1;
+      console.log('All entries deleted from database.');
+      saveDatabaseToLocalStorage();
+      displayDatabaseEntries();
+    }
+
+    function saveDatabaseToLocalStorage() {
+      localStorage.setItem(databaseName, JSON.stringify(database));
+      console.log(`Database '${databaseName}' saved to localStorage.`);
+    }
+
+    // Initial display of database entries
+    displayDatabaseEntries();
+</script>
+
+</body>
+</html>

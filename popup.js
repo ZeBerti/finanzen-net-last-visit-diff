@@ -1,0 +1,1 @@
+console.log("finanzen.net diff options clicked")

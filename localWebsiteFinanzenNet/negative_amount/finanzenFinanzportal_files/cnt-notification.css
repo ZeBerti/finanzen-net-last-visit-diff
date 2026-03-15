@@ -1,0 +1,164 @@
+.finnet-notification {
+	font-weight: bold;
+	visibility: hidden;
+	min-width: 350px;
+	background-color: var(--sg-gray-200);
+	border: 1px solid var(--sg-gray-800);
+	color: var(--sg-gray-800);
+	text-align: center;
+	border-radius: 4px;
+	padding: 16px;
+	position: fixed;
+	z-index: 71;
+	left: 50%;
+}
+
+.finnet-notification--success {
+	background-color: #DEFCF4;
+	border-color: var(--sg-de-positive-green);
+}
+
+	.finnet-notification--success > .finnet-notification__text {
+		color: var(--sg-de-positive-green);
+	}
+
+.finnet-notification--danger {
+	background-color: #EB8E97;
+	border-color: #BE2131;
+}
+
+	.finnet-notification--danger > .finnet-notification__text {
+		color: #BE2131;
+	}
+
+
+.finnet-notification--visible {
+	visibility: visible;
+}
+
+
+
+@media (min-width: 992px) {
+	.finnet-notification {
+		bottom: 15px;
+	}
+
+	.finnet-notification--visible {
+		-webkit-animation: fadein-bottom 0.5s, fadeout-bottom 0.5s 5.5s;
+		animation: fadein-bottom 0.5s, fadeout-bottom 0.5s 5.5s;
+	}
+}
+
+@media (max-width: 992px) {
+	.finnet-notification {
+		left: 5%;
+		width: 300px;
+		top: 75px;
+	}
+
+	.finnet-notification--visible {
+		-webkit-animation: fadein-top 0.5s, fadeout-top 0.5s 5s;
+		animation: fadein-top 0.5s, fadeout-top 0.5s 5s;
+	}
+}
+
+
+
+
+@-webkit-keyframes fadein-bottom {
+	from {
+		bottom: 0;
+		opacity: 0;
+	}
+
+	to {
+		bottom: 30px;
+		opacity: 1;
+	}
+}
+
+@keyframes fadein-bottom {
+	from {
+		bottom: 0;
+		opacity: 0;
+	}
+
+	to {
+		bottom: 30px;
+		opacity: 1;
+	}
+}
+
+@-webkit-keyframes fadeout-bottom {
+	from {
+		bottom: 30px;
+		opacity: 1;
+	}
+
+	to {
+		bottom: 0;
+		opacity: 0;
+	}
+}
+
+@keyframes fadeout-bottom {
+	from {
+		bottom: 30px;
+		opacity: 1;
+	}
+
+	to {
+		bottom: 0;
+		opacity: 0;
+	}
+}
+
+
+
+@-webkit-keyframes fadein-top {
+	from {
+		top: 0;
+		opacity: 0;
+	}
+
+	to {
+		top: 75px;
+		opacity: 1;
+	}
+}
+
+@keyframes fadein-top {
+	from {
+		top: 0;
+		opacity: 0;
+	}
+
+	to {
+		top: 75px;
+		opacity: 1;
+	}
+}
+
+@-webkit-keyframes fadeout-top {
+	from {
+		top: 75px;
+		opacity: 1;
+	}
+
+	to {
+		top: 0;
+		opacity: 0;
+	}
+}
+
+@keyframes fadeout-top {
+	from {
+		top: 75px;
+		opacity: 1;
+	}
+
+	to {
+		top: 0;
+		opacity: 0;
+	}
+}
