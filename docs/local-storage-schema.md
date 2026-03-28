@@ -10,6 +10,7 @@
 - Der Wert unter dem Key ist ein JSON-Array.
 - Jeder Eintrag repraesentiert den zuletzt bekannten Stand fuer `Gesamt` oder eine einzelne Position.
 - Es wird nur noch dieses Schema unterstuetzt.
+- Ein Snapshot wird nur erneuert, wenn der letzte gespeicherte Stand mindestens 2 Stunden alt ist.
 
 ## Eintragsstruktur
 ```json
@@ -58,6 +59,13 @@
 ## Hinweis zu Alt-Daten
 - Aeltere `localStorage`-Eintraege im frueheren Format werden nicht mehr ausgewertet.
 - Nach dieser Umstellung kann der erste Aufruf der Depotseite deshalb wie ein Erstbesuch wirken.
+
+## Snapshot-Policy
+- Diffs werden immer gegen den zuletzt gespeicherten Snapshot berechnet.
+- Ein neuer Snapshot wird nur geschrieben, wenn:
+  - noch kein Eintrag existiert, oder
+  - der letzte Eintrag mindestens 2 Stunden alt ist.
+- Mehrfaches Reloaden innerhalb dieses Fensters ueberschreibt den Referenzstand deshalb nicht.
 
 ## Aktuelle Nutzung im Code
 - Lesen und Schreiben:

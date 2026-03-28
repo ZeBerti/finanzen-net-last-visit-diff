@@ -24,6 +24,8 @@ function getStorageEntryKey(entry) {
   return entry?.key || null;
 }
 
+const SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+
 function normalizeStorageEntry(entry) {
   if (!entry || typeof entry !== "object") {
     return null;
@@ -67,6 +69,51 @@ function getEntryCurrentValue(entry) {
 
 function getEntryValueSinceBuy(entry) {
   return extractNumber(entry?.sinceBuyValue);
+}
+
+function getEntryTimestampMs(entry) {
+  if (!entry?.timestamp) {
+    return null;
+  }
+
+  const timestampMs = Date.parse(entry.timestamp);
+  return Number.isNaN(timestampMs) ? null : timestampMs;
+}
+
+function shouldRefreshSnapshot(entry, minAgeMs) {
+  if (!entry) {
+    return true;
+  }
+
+  const lastTimestampMs = getEntryTimestampMs(entry);
+  if (lastTimestampMs === null) {
+    return true;
+  }
+
+  return (Date.now() - lastTimestampMs) >= minAgeMs;
+}
+
+function formatSnapshotAge(entry) {
+  const lastTimestampMs = getEntryTimestampMs(entry);
+  if (lastTimestampMs === null) {
+    return "unbekannt";
+  }
+
+  const ageMs = Math.max(0, Date.now() - lastTimestampMs);
+  const totalMinutes = Math.floor(ageMs / (60 * 1000));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return `vor ${days}d ${hours}h`;
+  }
+
+  if (hours > 0) {
+    return `vor ${hours}h ${minutes}m`;
+  }
+
+  return `vor ${minutes}m`;
 }
 
 function calculateDiffValues(previousEntry, currentValues) {

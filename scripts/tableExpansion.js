@@ -65,6 +65,39 @@ function resolvePositionIdentity(positionRow, shareName, productIndex) {
     };
 }
 
+function normalizeHeaderText(headerCell) {
+    return headerCell.textContent
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+}
+
+function buildColumnMap(headerCells) {
+    const columnMap = {
+        name: -1,
+        currentValue: -1,
+        absolutePerformance: -1
+    };
+
+    headerCells.forEach(function(headerCell, index) {
+        const headerText = normalizeHeaderText(headerCell);
+
+        if (columnMap.name === -1 && headerText.includes("stück") && headerText.includes("name")) {
+            columnMap.name = index;
+        }
+
+        if (columnMap.currentValue === -1 && headerText.includes("akt. kurs")) {
+            columnMap.currentValue = index;
+        }
+
+        if (columnMap.absolutePerformance === -1 && headerText.includes("± gesamt")) {
+            columnMap.absolutePerformance = index;
+        }
+    });
+
+    return columnMap;
+}
+
 
 function addNewColumnHeader() {
     // Find the table element
@@ -79,7 +112,8 @@ function addNewColumnHeader() {
     var headerCells = table.querySelectorAll('.table__th');
     customLog("header cells");
     customLog(headerCells);
-    var targetColumnIndex = -1;
+    const columnMap = buildColumnMap(headerCells);
+    var targetColumnIndex = columnMap.absolutePerformance;
     let thGesamt = null;
     headerCells.forEach(function(headerCell, index) {
         var linksInHeaderCell = headerCell.querySelectorAll('a');
@@ -91,9 +125,10 @@ function addNewColumnHeader() {
         });
     });
     customLog("targetColumnIndex: " + targetColumnIndex)
+    customLog(columnMap);
 
     // If the target column with "± gesamt" is found, add a new column
-    if (targetColumnIndex !== -1 && thGesamt) {
+    if (targetColumnIndex !== -1 && thGesamt && columnMap.name !== -1 && columnMap.currentValue !== -1) {
 
         // die erste Row ist der Header der Tabelle
         var rows = table.querySelectorAll('thead .table__tr');
@@ -135,13 +170,12 @@ function addNewColumnHeader() {
             // ignore "info-elements"
             if(positionRow.querySelectorAll("td").length > 2) {
                 const cells = positionRow.querySelectorAll("td");
-                if (cells.length <= 4) {
+                if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
                     customLog("Skipping row with unexpected cell count", "WARN");
                     return;
                 }
 
-                // index 1: name der aktie
-                let shareNameElement = cells[1]?.querySelectorAll("a")[0];
+                let shareNameElement = cells[columnMap.name]?.querySelectorAll("a")[0];
                 let shareName = shareNameElement ? shareNameElement.innerHTML : "N/A";
                 productNameList.push(shareName);
                 let numberOfProduct = productNameList.filter(product => product === shareName).length;
@@ -151,11 +185,9 @@ function addNewColumnHeader() {
                     customLog(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`, "WARN");
                 }
 
-                //index 2: Aktueller Kurs / Wert
-                let aktuellerKurs = extractNumber(cells[2].querySelectorAll("strong")[0]?.innerHTML);
+                let aktuellerKurs = extractNumber(cells[columnMap.currentValue].querySelectorAll("strong")[0]?.innerHTML);
 
-                // index 4: gesamt-Wert. hier muss ein before hin
-                const gesamtCell = cells[4];
+                const gesamtCell = cells[targetColumnIndex];
                 const gesamtSpans = gesamtCell.querySelectorAll("span");
                 if (gesamtSpans.length < 3) {
                     customLog(`Skipping row '${shareName}' because summary spans are missing`, "WARN");
@@ -176,8 +208,12 @@ function addNewColumnHeader() {
 
                     customLog("gesamtEur/%/wertentwSeitKaufAbs: " + gesamtEuro + " " + gesamtProzent + " " + gesamtDomSeitKauf);
 
-                    saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf, positionStorageKey);
-                    customLog(shareName + " saved to " + DATABASE_KEY);
+                    if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
+                        saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf, positionStorageKey);
+                        customLog(shareName + " saved to " + DATABASE_KEY);
+                    } else {
+                        customLog(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`, "INFO");
+                    }
 
                     // Diff anzeigen von zuletzt und aktuell
                     if(lastShareEntry) {
@@ -208,7 +244,7 @@ function addNewColumnHeader() {
                  "\nProzent: " + formatPercent(diffValues.percentageDiff) +
                  "\nSeit Kauf: " + formatEuro(diffValues.sinceBuyDiff) +
                  "\nMatching: " + (positionIdentity.mode === "stable" ? "stabil via pkdepdatennr" : `degradiert via ${positionIdentity.reason}`) +
-                 "\nZuletzt aktualisiert: " + (lastShareEntry.timestamp || "unbekannt"));
+                 "\nSnapshot-Alter: " + formatSnapshotAge(lastShareEntry));
                 positionRow.insertBefore(tdCopy, gesamtCell);
 
             }

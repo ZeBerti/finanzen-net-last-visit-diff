@@ -1,6 +1,5 @@
-
-
-console.log("start finanzen.net extension v0.0.3")
+const extensionVersion = chrome.runtime?.getManifest?.().version || "unknown";
+console.log(`start finanzen.net extension v${extensionVersion}`)
 // lösche werbung
 
 setTimeout(() => {
@@ -141,7 +140,11 @@ function initPortfolioDiff() {
     lastTimestamp = lastEntry.timestamp ?? "Never";
   }
 
-  saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
+  if (shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
+    saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
+  } else {
+    console.info("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
+  }
 
   const headerTable = parentDiv.parentNode;
   if (headerTable) {
