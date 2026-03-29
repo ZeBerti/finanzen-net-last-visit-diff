@@ -51,6 +51,35 @@ function changeClassOfChildren(parentDom, cssBefore, cssAfter) {
   }
 }
 
+function normalizeSummaryValueText(text) {
+  if (!text || !/\d/.test(text)) {
+    return text;
+  }
+
+  return text
+    .replace(/\s*EUR\b/g, " €")
+    .replace(/\s*%\b/g, " %")
+    .replace(/\s+€/g, " €");
+}
+
+function normalizeSummaryDisplay(summaryContainer) {
+  if (!summaryContainer) {
+    return;
+  }
+
+  const valueElements = summaryContainer.querySelectorAll("div, span");
+  valueElements.forEach(function(element) {
+    if (element.children.length > 0) {
+      return;
+    }
+
+    const normalizedText = normalizeSummaryValueText(element.textContent);
+    if (normalizedText !== element.textContent) {
+      element.textContent = normalizedText;
+    }
+  });
+}
+
 function createNewHeaderDiv() {
     // Erstelle ein neues div-Element für das Child
     const newChildDiv = document.createElement('div');
@@ -218,6 +247,7 @@ function initPortfolioDiff() {
   const headerTable = portfolioSummary.parentDiv.parentNode;
   if (headerTable) {
     changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
+    normalizeSummaryDisplay(headerTable);
     headerTable.appendChild(createNewHeaderDiv());
   }
 

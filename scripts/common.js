@@ -197,7 +197,10 @@ function formatEuro (num) {
 function formatPercent (num) {
     if (isNaN(num))
         return num;
-    return num.toFixed(2) + "%";
+    return num.toLocaleString("de-DE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " %";
 }
 
 
