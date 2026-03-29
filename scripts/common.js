@@ -5,7 +5,7 @@ function readFromStorage(key, fallbackValue) {
     const value = localStorage.getItem(key);
     return value ? JSON.parse(value) : fallbackValue;
   } catch (error) {
-    console.error(`Failed to read localStorage key '${key}'`, error);
+    logError(`Failed to read localStorage key '${key}'`, error);
     return fallbackValue;
   }
 }
@@ -15,7 +15,7 @@ function writeToStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (error) {
-    console.error(`Failed to write localStorage key '${key}'`, error);
+    logError(`Failed to write localStorage key '${key}'`, error);
     return false;
   }
 }
@@ -24,7 +24,24 @@ function getStorageEntryKey(entry) {
   return entry?.key || null;
 }
 
+const LOG_PREFIX = "[FinanzenDotNetDiff]";
 const SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+
+function logDebug(message, ...args) {
+  console.log(LOG_PREFIX, message, ...args);
+}
+
+function logInfo(message, ...args) {
+  console.info(LOG_PREFIX, message, ...args);
+}
+
+function logWarn(message, ...args) {
+  console.warn(LOG_PREFIX, message, ...args);
+}
+
+function logError(message, ...args) {
+  console.error(LOG_PREFIX, message, ...args);
+}
 
 function normalizeStorageEntry(entry) {
   if (!entry || typeof entry !== "object") {
@@ -165,10 +182,7 @@ function extractNumber(text) {
     // Entferne das Währungssymbol und Tausendertrennzeichen, ersetze das Komma durch einen Punkt
     const cleanText = text.replace(/[^\d,-]/g, '').replace(',', '.');
     // Parse die gereinigte Zeichenkette zu einer Fließkommazahl
-    const number = parseFloat(cleanText);
-    console.log("Number to extract:");
-        console.log(text + " -> " + number);
-    return number;
+    return parseFloat(cleanText);
 }
 
 function formatEuro (num) {
@@ -215,11 +229,11 @@ function findElementWithText(parentElement, domType, text) {
   const resolvedEntryKey = entryKey;
 
   if (!resolvedEntryKey) {
-    console.error(`Missing storage key for database '${databaseKey}' and product '${productName}'`);
+    logError(`Missing storage key for database '${databaseKey}' and product '${productName}'`);
     return;
   }
 
-  console.log(`Saving to database '${databaseKey}'`);
+  logDebug(`Saving to database '${databaseKey}'`);
 
   // Check if productName already exists in database
   const existingEntryIndex = database.findIndex(entry => getStorageEntryKey(entry) === resolvedEntryKey);
@@ -233,7 +247,7 @@ function findElementWithText(parentElement, domType, text) {
     database[existingEntryIndex].timestamp = timestamp;
     database[existingEntryIndex].sinceBuyValue = extractNumber(sinceBuyValue);
     database[existingEntryIndex].productIndex = productIndex;
-    console.log(`Entry '${productName}' updated in database.`);
+    logDebug(`Entry '${productName}' updated in database.`);
   } else {
     // Create a new entry
     const entry = {
@@ -247,7 +261,7 @@ function findElementWithText(parentElement, domType, text) {
       sinceBuyValue: extractNumber(sinceBuyValue)
     };
     database.push(entry);
-    console.log(`New entry '${productName}' added to database.`);
+    logDebug(`New entry '${productName}' added to database.`);
   }
 
     // Save database to localStorage

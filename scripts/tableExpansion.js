@@ -1,24 +1,3 @@
-LOGLEVEL = "DEBUG";
-
-function customLog(content, level) {
-    const effectiveLevel = level || LOGLEVEL;
-
-    switch (effectiveLevel) {
-        case "DEBUG":
-            console.log(content);
-            break;
-        case "INFO":
-            console.info(content);
-            break;
-        case "WARN":
-            console.warn(content);
-            break;
-        case "ERROR":
-            console.error(content);
-            break;
-    }
-}
-
 function extractDepotEntryId(positionRow) {
     const sellLink = positionRow.querySelector('a[href*="pkdepdatennr="]');
     if (!sellLink) {
@@ -29,7 +8,7 @@ function extractDepotEntryId(positionRow) {
         const sellUrl = new URL(sellLink.href, window.location.origin);
         return sellUrl.searchParams.get('pkdepdatennr');
     } catch (error) {
-        customLog(`Failed to parse depot entry id: ${error}`, "WARN");
+        logWarn(`Failed to parse depot entry id: ${error}`);
         return null;
     }
 }
@@ -103,15 +82,13 @@ function addNewColumnHeader() {
     // Find the table element
     var table = document.querySelector('.table--content-right');
     if (!table) {
-        customLog("Portfolio table not found", "WARN");
+        logWarn("Portfolio table not found");
         return;
     }
     let productNameList=[];
 
     // Find the header cell containing "± gesamt"
     var headerCells = table.querySelectorAll('.table__th');
-    customLog("header cells");
-    customLog(headerCells);
     const columnMap = buildColumnMap(headerCells);
     var targetColumnIndex = columnMap.absolutePerformance;
     let thGesamt = null;
@@ -124,8 +101,6 @@ function addNewColumnHeader() {
             }
         });
     });
-    customLog("targetColumnIndex: " + targetColumnIndex)
-    customLog(columnMap);
 
     // If the target column with "± gesamt" is found, add a new column
     if (targetColumnIndex !== -1 && thGesamt && columnMap.name !== -1 && columnMap.currentValue !== -1) {
@@ -136,14 +111,14 @@ function addNewColumnHeader() {
 
         let row = rows[0];
         if (!row) {
-            customLog("Table header row not found", "WARN");
+            logWarn("Table header row not found");
             return;
         }
 
         var thNew = thGesamt.cloneNode(true);
         const headerLinks = thNew.querySelectorAll('th a');
         if (headerLinks.length < 3) {
-            customLog("Expected header links for duplicated column not found", "WARN");
+            logWarn("Expected header links for duplicated column not found");
             return;
         }
         headerLinks[0].innerHTML = "± zuletzt";
@@ -171,7 +146,7 @@ function addNewColumnHeader() {
             if(positionRow.querySelectorAll("td").length > 2) {
                 const cells = positionRow.querySelectorAll("td");
                 if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
-                    customLog("Skipping row with unexpected cell count", "WARN");
+                    logWarn("Skipping row with unexpected cell count");
                     return;
                 }
 
@@ -182,7 +157,7 @@ function addNewColumnHeader() {
                 const positionIdentity = resolvePositionIdentity(positionRow, shareName, numberOfProduct);
                 const positionStorageKey = positionIdentity.storageKey;
                 if (positionIdentity.mode === "degraded") {
-                    customLog(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`, "WARN");
+                    logWarn(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`);
                 }
 
                 let aktuellerKurs = extractNumber(cells[columnMap.currentValue].querySelectorAll("strong")[0]?.innerHTML);
@@ -190,7 +165,7 @@ function addNewColumnHeader() {
                 const gesamtCell = cells[targetColumnIndex];
                 const gesamtSpans = gesamtCell.querySelectorAll("span");
                 if (gesamtSpans.length < 3) {
-                    customLog(`Skipping row '${shareName}' because summary spans are missing`, "WARN");
+                    logWarn(`Skipping row '${shareName}' because summary spans are missing`);
                     return;
                 }
                 let gesamtEuro = extractNumber(gesamtSpans[0].innerHTML);
@@ -205,34 +180,23 @@ function addNewColumnHeader() {
                 });
 
                 if(positionRow.getElementsByClassName("message--warning").length === 0) {
-
-                    customLog("gesamtEur/%/wertentwSeitKaufAbs: " + gesamtEuro + " " + gesamtProzent + " " + gesamtDomSeitKauf);
-
                     if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
                         saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf, positionStorageKey);
-                        customLog(shareName + " saved to " + DATABASE_KEY);
                     } else {
-                        customLog(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`, "INFO");
-                    }
-
-                    // Diff anzeigen von zuletzt und aktuell
-                    if(lastShareEntry) {
-                        customLog(shareName + " previous absolute performance - current absolute performance");
-                        customLog(getEntryAbsolutePerformance(lastShareEntry) + " - " + gesamtEuro + " = ") ;
-                        customLog(diffValues?.absolutePerformanceDiff);
+                        logInfo(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`);
                     }
                 }
 
                 let tdCopy = gesamtCell.cloneNode(true);
 
                 if (!lastShareEntry) {
-                    customLog(`No previous entry found for '${shareName}', skipping diff column`, "INFO");
+                    logInfo(`No previous entry found for '${shareName}', skipping diff column`);
                     return;
                 }
 
                 const tdCopySpans = tdCopy.querySelectorAll('span');
                 if (tdCopySpans.length < 3) {
-                    customLog(`Skipping row '${shareName}' because cloned diff cell is incomplete`, "WARN");
+                    logWarn(`Skipping row '${shareName}' because cloned diff cell is incomplete`);
                     return;
                 }
 
@@ -253,16 +217,6 @@ function addNewColumnHeader() {
 
         // jetzt muss die tabelle neben dem header eine weitere spalte erhalten!
         // document.querySelectorAll("table tbody tr") -> darüber loopen und an pos td=5 before einfügen
-        let tbody = row.parentNode.parentNode.parentNode.querySelectorAll("tbody");
-
-            customLog("1 Tbody n:");
-            customLog(tbody);
-        // Alle Positionen durchgehen und den "zuletzt" -Wert einfügen
-
-        customLog("row");
-        customLog(row);
-        customLog("tbody");
-        customLog(tbody);
-
+        row.parentNode.parentNode.parentNode.querySelectorAll("tbody");
     }
 }

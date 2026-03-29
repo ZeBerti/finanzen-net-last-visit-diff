@@ -1,14 +1,14 @@
 const extensionVersion = chrome.runtime?.getManifest?.().version || "unknown";
-console.log(`start finanzen.net extension v${extensionVersion}`)
+logInfo(`start finanzen.net extension v${extensionVersion}`)
 // lösche werbung
 
 setTimeout(() => {
     let webpushModal = document.getElementById("finWebpushNotificationModal");
     if (webpushModal) {
         webpushModal.remove();
-        console.log("WebPush commercial removed successfully");
+        logDebug("WebPush commercial removed successfully");
     } else {
-        console.log("WebPush commercial modal not found");
+        logDebug("WebPush commercial modal not found");
     }
 }, 1000);
 
@@ -96,7 +96,7 @@ function createNewHeaderDiv() {
 }
 
 function loadFromDatabase(databaseKey) {
-  console.log(`Loading from database '${databaseKey}'...`);
+  logDebug(`Loading from database '${databaseKey}'...`);
   return normalizeStorageEntries(readFromStorage(databaseKey, []));
 }
 
@@ -108,7 +108,7 @@ let lastTimestamp = "Never";
 function initPortfolioDiff() {
   const perfGesamtDiv = findDivWithText("Perf. gesamt");
   if (!perfGesamtDiv?.parentNode) {
-    console.warn("Perf. gesamt section not found. Skipping extension rendering.");
+    logWarn("Perf. gesamt section not found. Skipping extension rendering.");
     return;
   }
 
@@ -119,7 +119,7 @@ function initPortfolioDiff() {
   const gesamtwertElement = gesamtwertLabel?.parentNode?.children?.[1];
 
   if (!performanceEuroElement || !performancePercentageElement || !gesamtwertElement) {
-    console.warn("Required portfolio summary elements not found. Skipping extension rendering.");
+    logWarn("Required portfolio summary elements not found. Skipping extension rendering.");
     return;
   }
 
@@ -128,9 +128,6 @@ function initPortfolioDiff() {
   const gesamtwert = extractNumber(gesamtwertElement.innerHTML);
 
   const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
-  console.log("Tupel perf.: " + tupelPerformanceLast);
-  console.log(tupelPerformanceLast);
-  console.log("tupel length: " + tupelPerformanceLast.length);
 
   const lastEntry = tupelPerformanceLast.find((entry) => entry?.key === "portfolio:gesamt")
     || tupelPerformanceLast[0];
@@ -143,7 +140,7 @@ function initPortfolioDiff() {
   if (shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
     saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
   } else {
-    console.info("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
+    logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
   }
 
   const headerTable = parentDiv.parentNode;
@@ -153,11 +150,6 @@ function initPortfolioDiff() {
   }
 
   addNewColumnHeader();
-
-  console.log("finanzen.net extension DEBUG");
-  console.log("performanceEuro: " + performanceEuro + " (" + performanceEuroLast + ")");
-  console.log("performance%: " + performancePercentage + " (" + performancePercentageLast + ")");
-  console.log("");
 }
 
 initPortfolioDiff();
