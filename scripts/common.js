@@ -139,10 +139,10 @@ function calculateDiffValues(previousEntry, currentValues) {
   }
 
   return {
-    currentValueDiff: getEntryCurrentValue(previousEntry) - extractNumber(currentValues?.currentValue),
-    absolutePerformanceDiff: getEntryAbsolutePerformance(previousEntry) - extractNumber(currentValues?.absolutePerformance),
-    percentageDiff: getEntryPercentagePerformance(previousEntry) - extractNumber(currentValues?.percentagePerformance),
-    sinceBuyDiff: getEntryValueSinceBuy(previousEntry) - extractNumber(currentValues?.sinceBuyValue)
+    currentValueDiff: extractNumber(currentValues?.currentValue) - getEntryCurrentValue(previousEntry),
+    absolutePerformanceDiff: extractNumber(currentValues?.absolutePerformance) - getEntryAbsolutePerformance(previousEntry),
+    percentageDiff: extractNumber(currentValues?.percentagePerformance) - getEntryPercentagePerformance(previousEntry),
+    sinceBuyDiff: extractNumber(currentValues?.sinceBuyValue) - getEntryValueSinceBuy(previousEntry)
   };
 }
 
