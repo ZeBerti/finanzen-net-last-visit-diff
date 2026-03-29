@@ -77,6 +77,22 @@ function buildColumnMap(headerCells) {
     return columnMap;
 }
 
+function createUnavailableDiffCell(sourceCell) {
+    const diffCell = sourceCell.cloneNode(true);
+    const diffCellSpans = diffCell.querySelectorAll("span");
+
+    if (diffCellSpans.length >= 3) {
+        diffCellSpans[0].textContent = "n/a";
+        diffCellSpans[1].textContent = "n/a";
+        diffCellSpans[2].textContent = "n/a";
+    } else {
+        diffCell.innerHTML = "n/a<br>n/a<br>n/a<br>";
+    }
+
+    diffCell.setAttribute("title", "Keine Kursdaten verfuegbar");
+    return diffCell;
+}
+
 function parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex) {
     const cells = positionRow.querySelectorAll("td");
     if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
@@ -181,6 +197,17 @@ function addNewColumnHeader() {
 
             // ignore "info-elements"
             if(positionRow.querySelectorAll("td").length > 2) {
+                if (positionRow.getElementsByClassName("message--warning").length > 0) {
+                    const warningPerformanceCell = positionRow.querySelectorAll("td")[targetColumnIndex];
+                    if (!warningPerformanceCell) {
+                        logWarn("Skipping warning row because performance cell is missing");
+                        return;
+                    }
+
+                    positionRow.insertBefore(createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell);
+                    return;
+                }
+
                 const parsedRow = parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex);
                 if (!parsedRow) {
                     return;
@@ -197,21 +224,19 @@ function addNewColumnHeader() {
                     sinceBuyValue: parsedRow.sinceBuyValue
                 });
 
-                if(positionRow.getElementsByClassName("message--warning").length === 0) {
-                    if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
-                        saveToDatabase(
-                            DATABASE_KEY,
-                            shareName,
-                            parsedRow.productIndex,
-                            parsedRow.currentValue,
-                            parsedRow.absolutePerformance,
-                            parsedRow.percentagePerformance,
-                            parsedRow.sinceBuyValue,
-                            positionStorageKey
-                        );
-                    } else {
-                        logInfo(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`);
-                    }
+                if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
+                    saveToDatabase(
+                        DATABASE_KEY,
+                        shareName,
+                        parsedRow.productIndex,
+                        parsedRow.currentValue,
+                        parsedRow.absolutePerformance,
+                        parsedRow.percentagePerformance,
+                        parsedRow.sinceBuyValue,
+                        positionStorageKey
+                    );
+                } else {
+                    logInfo(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`);
                 }
 
                 let tdCopy = parsedRow.performanceCell.cloneNode(true);
