@@ -77,6 +77,43 @@ function buildColumnMap(headerCells) {
     return columnMap;
 }
 
+function parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex) {
+    const cells = positionRow.querySelectorAll("td");
+    if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
+        logWarn("Skipping row with unexpected cell count");
+        return null;
+    }
+
+    const shareNameElement = cells[columnMap.name]?.querySelectorAll("a")[0];
+    const shareName = shareNameElement ? shareNameElement.innerHTML : "N/A";
+    productNameList.push(shareName);
+    const productIndex = productNameList.filter(product => product === shareName).length;
+    const positionIdentity = resolvePositionIdentity(positionRow, shareName, productIndex);
+
+    if (positionIdentity.mode === "degraded") {
+        logWarn(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`);
+    }
+
+    const currentValue = extractNumber(cells[columnMap.currentValue].querySelectorAll("strong")[0]?.innerHTML);
+    const performanceCell = cells[targetColumnIndex];
+    const performanceSpans = performanceCell.querySelectorAll("span");
+    if (performanceSpans.length < 3) {
+        logWarn(`Skipping row '${shareName}' because summary spans are missing`);
+        return null;
+    }
+
+    return {
+        shareName: shareName,
+        productIndex: productIndex,
+        positionIdentity: positionIdentity,
+        currentValue: currentValue,
+        absolutePerformance: extractNumber(performanceSpans[0].innerHTML),
+        percentagePerformance: extractNumber(performanceSpans[1].innerHTML),
+        sinceBuyValue: extractNumber(performanceSpans[2].innerHTML),
+        performanceCell: performanceCell
+    };
+}
+
 
 function addNewColumnHeader() {
     // Find the table element
@@ -144,50 +181,40 @@ function addNewColumnHeader() {
 
             // ignore "info-elements"
             if(positionRow.querySelectorAll("td").length > 2) {
-                const cells = positionRow.querySelectorAll("td");
-                if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
-                    logWarn("Skipping row with unexpected cell count");
+                const parsedRow = parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex);
+                if (!parsedRow) {
                     return;
                 }
 
-                let shareNameElement = cells[columnMap.name]?.querySelectorAll("a")[0];
-                let shareName = shareNameElement ? shareNameElement.innerHTML : "N/A";
-                productNameList.push(shareName);
-                let numberOfProduct = productNameList.filter(product => product === shareName).length;
-                const positionIdentity = resolvePositionIdentity(positionRow, shareName, numberOfProduct);
+                const shareName = parsedRow.shareName;
+                const positionIdentity = parsedRow.positionIdentity;
                 const positionStorageKey = positionIdentity.storageKey;
-                if (positionIdentity.mode === "degraded") {
-                    logWarn(`Degraded matching for '${shareName}' via ${positionIdentity.reason}`);
-                }
-
-                let aktuellerKurs = extractNumber(cells[columnMap.currentValue].querySelectorAll("strong")[0]?.innerHTML);
-
-                const gesamtCell = cells[targetColumnIndex];
-                const gesamtSpans = gesamtCell.querySelectorAll("span");
-                if (gesamtSpans.length < 3) {
-                    logWarn(`Skipping row '${shareName}' because summary spans are missing`);
-                    return;
-                }
-                let gesamtEuro = extractNumber(gesamtSpans[0].innerHTML);
-                let gesamtProzent = extractNumber(gesamtSpans[1].innerHTML);
-                let gesamtDomSeitKauf = extractNumber(gesamtSpans[2].innerHTML);
                 const lastShareEntry = sharesZuletzt.get(positionStorageKey);
                 const diffValues = calculateDiffValues(lastShareEntry, {
-                    currentValue: aktuellerKurs,
-                    absolutePerformance: gesamtEuro,
-                    percentagePerformance: gesamtProzent,
-                    sinceBuyValue: gesamtDomSeitKauf
+                    currentValue: parsedRow.currentValue,
+                    absolutePerformance: parsedRow.absolutePerformance,
+                    percentagePerformance: parsedRow.percentagePerformance,
+                    sinceBuyValue: parsedRow.sinceBuyValue
                 });
 
                 if(positionRow.getElementsByClassName("message--warning").length === 0) {
                     if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
-                        saveToDatabase(DATABASE_KEY, shareName, numberOfProduct, aktuellerKurs, gesamtEuro, gesamtProzent, gesamtDomSeitKauf, positionStorageKey);
+                        saveToDatabase(
+                            DATABASE_KEY,
+                            shareName,
+                            parsedRow.productIndex,
+                            parsedRow.currentValue,
+                            parsedRow.absolutePerformance,
+                            parsedRow.percentagePerformance,
+                            parsedRow.sinceBuyValue,
+                            positionStorageKey
+                        );
                     } else {
                         logInfo(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`);
                     }
                 }
 
-                let tdCopy = gesamtCell.cloneNode(true);
+                let tdCopy = parsedRow.performanceCell.cloneNode(true);
 
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', skipping diff column`);
@@ -204,12 +231,12 @@ function addNewColumnHeader() {
                 tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
                 tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
 
-                tdCopy.setAttribute("title", "Aktueller Kurs: " + getEntryCurrentValue(lastShareEntry) + " - " + aktuellerKurs +
+                tdCopy.setAttribute("title", "Aktueller Kurs: " + getEntryCurrentValue(lastShareEntry) + " - " + parsedRow.currentValue +
                  "\nProzent: " + formatPercent(diffValues.percentageDiff) +
                  "\nSeit Kauf: " + formatEuro(diffValues.sinceBuyDiff) +
                  "\nMatching: " + (positionIdentity.mode === "stable" ? "stabil via pkdepdatennr" : `degradiert via ${positionIdentity.reason}`) +
                  "\nSnapshot-Alter: " + formatSnapshotAge(lastShareEntry));
-                positionRow.insertBefore(tdCopy, gesamtCell);
+                positionRow.insertBefore(tdCopy, parsedRow.performanceCell);
 
             }
 
