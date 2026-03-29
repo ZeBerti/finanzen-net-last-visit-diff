@@ -93,6 +93,22 @@ function createUnavailableDiffCell(sourceCell) {
     return diffCell;
 }
 
+function createPendingDiffCell(sourceCell) {
+    const diffCell = sourceCell.cloneNode(true);
+    const diffCellSpans = diffCell.querySelectorAll("span");
+
+    if (diffCellSpans.length >= 3) {
+        diffCellSpans[0].textContent = "n/a";
+        diffCellSpans[1].textContent = "n/a";
+        diffCellSpans[2].textContent = "n/a";
+    } else {
+        diffCell.innerHTML = "n/a<br>n/a<br>n/a<br>";
+    }
+
+    diffCell.setAttribute("title", "Noch kein vorheriger Snapshot vorhanden");
+    return diffCell;
+}
+
 function parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex) {
     const cells = positionRow.querySelectorAll("td");
     if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
@@ -130,45 +146,110 @@ function parsePositionRow(positionRow, columnMap, productNameList, targetColumnI
     };
 }
 
-
-function addNewColumnHeader() {
-    // Find the table element
-    var table = document.querySelector('.table--content-right');
+function getPortfolioTableState() {
+    const table = document.querySelector(".table--content-right");
     if (!table) {
         logWarn("Portfolio table not found");
-        return;
+        return null;
     }
-    let productNameList=[];
 
-    // Find the header cell containing "± gesamt"
-    var headerCells = table.querySelectorAll('.table__th');
+    const headerCells = table.querySelectorAll(".table__th");
     const columnMap = buildColumnMap(headerCells);
-    var targetColumnIndex = columnMap.absolutePerformance;
+    let targetColumnIndex = columnMap.absolutePerformance;
     let thGesamt = null;
+
     headerCells.forEach(function(headerCell, index) {
-        var linksInHeaderCell = headerCell.querySelectorAll('a');
-        linksInHeaderCell.forEach(function(headerCell2, index2) {
-            if (headerCell2.innerHTML.trim() === '± gesamt') {
+        const linksInHeaderCell = headerCell.querySelectorAll("a");
+        linksInHeaderCell.forEach(function(headerLink) {
+            if (headerLink.innerHTML.trim() === "± gesamt") {
                 targetColumnIndex = index;
-                thGesamt = headerCell2.parentNode;
+                thGesamt = headerLink.parentNode;
             }
         });
     });
 
-    // If the target column with "± gesamt" is found, add a new column
-    if (targetColumnIndex !== -1 && thGesamt && columnMap.name !== -1 && columnMap.currentValue !== -1) {
+    if (targetColumnIndex === -1 || !thGesamt || columnMap.name === -1 || columnMap.currentValue === -1) {
+        logWarn("Required portfolio columns not found");
+        return null;
+    }
 
-        // die erste Row ist der Header der Tabelle
-        var rows = table.querySelectorAll('thead .table__tr');
-        var tbodyRows = table.querySelectorAll('tbody .table__tr');
+    const headerRows = table.querySelectorAll("thead .table__tr");
+    const headerRow = headerRows[0];
+    if (!headerRow) {
+        logWarn("Table header row not found");
+        return null;
+    }
 
-        let row = rows[0];
-        if (!row) {
-            logWarn("Table header row not found");
+    return {
+        table: table,
+        columnMap: columnMap,
+        targetColumnIndex: targetColumnIndex,
+        thGesamt: thGesamt,
+        headerRow: headerRow,
+        tbodyRows: table.querySelectorAll("tbody .table__tr")
+    };
+}
+
+function saveParsedRowSnapshot(parsedRow, forceRefreshSnapshot) {
+    const positionStorageKey = parsedRow.positionIdentity.storageKey;
+    const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
+    const lastShareEntry = sharesZuletzt.get(positionStorageKey);
+
+    if (forceRefreshSnapshot || shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
+        saveToDatabase(
+            DATABASE_KEY,
+            parsedRow.shareName,
+            parsedRow.productIndex,
+            parsedRow.currentValue,
+            parsedRow.absolutePerformance,
+            parsedRow.percentagePerformance,
+            parsedRow.sinceBuyValue,
+            positionStorageKey
+        );
+    } else {
+        logInfo(`Skipping snapshot refresh for '${parsedRow.shareName}' because the last snapshot is younger than 2 hours.`);
+    }
+
+    return lastShareEntry;
+}
+
+function refreshPositionSnapshots(forceRefreshSnapshot) {
+    const tableState = getPortfolioTableState();
+    if (!tableState) {
+        return { refreshedCount: 0 };
+    }
+
+    const productNameList = [];
+    let refreshedCount = 0;
+
+    tableState.tbodyRows.forEach(function(positionRow) {
+        if (positionRow.querySelectorAll("td").length <= 2 || positionRow.getElementsByClassName("message--warning").length > 0) {
             return;
         }
 
-        var thNew = thGesamt.cloneNode(true);
+        const parsedRow = parsePositionRow(positionRow, tableState.columnMap, productNameList, tableState.targetColumnIndex);
+        if (!parsedRow) {
+            return;
+        }
+
+        saveParsedRowSnapshot(parsedRow, forceRefreshSnapshot);
+        refreshedCount += 1;
+    });
+
+    return { refreshedCount: refreshedCount };
+}
+
+function addNewColumnHeader() {
+    const tableState = getPortfolioTableState();
+    if (!tableState) {
+        return;
+    }
+
+    // If the target column with "± gesamt" is found, add a new column
+    if (tableState.targetColumnIndex !== -1 && tableState.thGesamt && tableState.columnMap.name !== -1 && tableState.columnMap.currentValue !== -1) {
+        let productNameList=[];
+
+        var thNew = tableState.thGesamt.cloneNode(true);
         const headerLinks = thNew.querySelectorAll('th a');
         if (headerLinks.length < 3) {
             logWarn("Expected header links for duplicated column not found");
@@ -187,18 +268,18 @@ function addNewColumnHeader() {
         headerLinks[2].removeAttribute("href");
 
 
-        row.insertBefore(thNew, thGesamt);
+        tableState.headerRow.insertBefore(thNew, tableState.thGesamt);
 
         const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
 
         // ____________________________
         // alle positionen loopen und Tabelle je Zeile erweitern
-        tbodyRows.forEach(function(positionRow) {
+        tableState.tbodyRows.forEach(function(positionRow) {
 
             // ignore "info-elements"
             if(positionRow.querySelectorAll("td").length > 2) {
                 if (positionRow.getElementsByClassName("message--warning").length > 0) {
-                    const warningPerformanceCell = positionRow.querySelectorAll("td")[targetColumnIndex];
+                    const warningPerformanceCell = positionRow.querySelectorAll("td")[tableState.targetColumnIndex];
                     if (!warningPerformanceCell) {
                         logWarn("Skipping warning row because performance cell is missing");
                         return;
@@ -208,7 +289,7 @@ function addNewColumnHeader() {
                     return;
                 }
 
-                const parsedRow = parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex);
+                const parsedRow = parsePositionRow(positionRow, tableState.columnMap, productNameList, tableState.targetColumnIndex);
                 if (!parsedRow) {
                     return;
                 }
@@ -224,25 +305,13 @@ function addNewColumnHeader() {
                     sinceBuyValue: parsedRow.sinceBuyValue
                 });
 
-                if (shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
-                    saveToDatabase(
-                        DATABASE_KEY,
-                        shareName,
-                        parsedRow.productIndex,
-                        parsedRow.currentValue,
-                        parsedRow.absolutePerformance,
-                        parsedRow.percentagePerformance,
-                        parsedRow.sinceBuyValue,
-                        positionStorageKey
-                    );
-                } else {
-                    logInfo(`Skipping snapshot refresh for '${shareName}' because the last snapshot is younger than 2 hours.`);
-                }
+                saveParsedRowSnapshot(parsedRow, false);
 
                 let tdCopy = parsedRow.performanceCell.cloneNode(true);
 
                 if (!lastShareEntry) {
-                    logInfo(`No previous entry found for '${shareName}', skipping diff column`);
+                    logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
+                    positionRow.insertBefore(createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell);
                     return;
                 }
 
@@ -266,9 +335,5 @@ function addNewColumnHeader() {
             }
 
         });
-
-        // jetzt muss die tabelle neben dem header eine weitere spalte erhalten!
-        // document.querySelectorAll("table tbody tr") -> darüber loopen und an pos td=5 before einfügen
-        row.parentNode.parentNode.parentNode.querySelectorAll("tbody");
     }
 }

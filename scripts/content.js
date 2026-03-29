@@ -76,12 +76,12 @@ function createNewHeaderDiv() {
     } else {
         spanA2.className = 'font-color-green';
     }
-    spanA2.innerHTML = performanceEuroLast;
+    spanA2.innerHTML = formatEuro(performanceEuroLast);
 
     // Erstelle ein span-Element für den WERT-B und den Prozentsatz
     const spanB = document.createElement('span');
     spanB.className = spanA2.className;
-    spanB.innerHTML = performancePercentageLast;
+    spanB.innerHTML = formatPercent(performancePercentageLast);
 
     // Füge die erstellten Elemente in die Struktur ein
     innerDiv2.appendChild(spanA);
@@ -105,11 +105,11 @@ let performanceEuroLast = 0;
 let performancePercentageLast = 0;
 let lastTimestamp = "Never";
 
-function initPortfolioDiff() {
+function getPortfolioSummaryElements() {
   const perfGesamtDiv = findDivWithText("Perf. gesamt");
   if (!perfGesamtDiv?.parentNode) {
     logWarn("Perf. gesamt section not found. Skipping extension rendering.");
-    return;
+    return null;
   }
 
   const parentDiv = perfGesamtDiv.parentNode;
@@ -120,30 +120,102 @@ function initPortfolioDiff() {
 
   if (!performanceEuroElement || !performancePercentageElement || !gesamtwertElement) {
     logWarn("Required portfolio summary elements not found. Skipping extension rendering.");
+    return null;
+  }
+
+  return {
+    parentDiv: parentDiv,
+    performanceEuroElement: performanceEuroElement,
+    performancePercentageElement: performancePercentageElement,
+    gesamtwertElement: gesamtwertElement
+  };
+}
+
+function getCurrentPortfolioSummary() {
+  const summaryElements = getPortfolioSummaryElements();
+  if (!summaryElements) {
+    return null;
+  }
+
+  return {
+    parentDiv: summaryElements.parentDiv,
+    performanceEuro: extractNumber(summaryElements.performanceEuroElement.innerHTML),
+    performancePercentage: extractNumber(summaryElements.performancePercentageElement.innerHTML),
+    gesamtwert: extractNumber(summaryElements.gesamtwertElement.innerHTML)
+  };
+}
+
+function getLastPortfolioSnapshotEntry() {
+  const entries = loadFromDatabase(DATABASE_KEY);
+  return entries.find((entry) => entry?.key === "portfolio:gesamt") || null;
+}
+
+function refreshPortfolioSnapshot(forceRefreshSnapshot) {
+  const portfolioSummary = getCurrentPortfolioSummary();
+  if (!portfolioSummary) {
+    return { refreshed: false, timestamp: null };
+  }
+
+  const lastEntry = getLastPortfolioSnapshotEntry();
+
+  if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
+    saveToDatabase(DATABASE_KEY, "Gesamt", 0, portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, portfolioSummary.performancePercentage, 0, "portfolio:gesamt");
+    return { refreshed: true, timestamp: getCurrentTimestamp() };
+  }
+
+  logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
+  return { refreshed: false, timestamp: lastEntry?.timestamp ?? null };
+}
+
+function getPopupSnapshotStatus() {
+  const entries = loadFromDatabase(DATABASE_KEY);
+  const portfolioEntry = entries.find((entry) => entry?.key === "portfolio:gesamt") || null;
+
+  return {
+    databaseKey: DATABASE_KEY,
+    entryCount: entries.length,
+    snapshotIntervalLabel: "2 Stunden",
+    hasSnapshot: Boolean(portfolioEntry),
+    lastSnapshotTimestamp: portfolioEntry?.timestamp ?? null,
+    lastSnapshotAge: portfolioEntry ? formatSnapshotAge(portfolioEntry) : "kein Snapshot",
+    version: extensionVersion
+  };
+}
+
+function resetPortfolioSnapshots() {
+  localStorage.removeItem(DATABASE_KEY);
+}
+
+function initPortfolioDiff() {
+  const portfolioSummary = getCurrentPortfolioSummary();
+  if (!portfolioSummary) {
     return;
   }
 
-  const performanceEuro = extractNumber(performanceEuroElement.innerHTML);
-  const performancePercentage = extractNumber(performancePercentageElement.innerHTML);
-  const gesamtwert = extractNumber(gesamtwertElement.innerHTML);
+  const performanceEuro = portfolioSummary.performanceEuro;
+  const performancePercentage = portfolioSummary.performancePercentage;
+  const gesamtwert = portfolioSummary.gesamtwert;
 
   const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
 
   const lastEntry = tupelPerformanceLast.find((entry) => entry?.key === "portfolio:gesamt")
     || tupelPerformanceLast[0];
   if (lastEntry) {
-    performanceEuroLast = getEntryAbsolutePerformance(lastEntry);
-    performancePercentageLast = getEntryPercentagePerformance(lastEntry);
+    const diffValues = calculateDiffValues(lastEntry, {
+      currentValue: gesamtwert,
+      absolutePerformance: performanceEuro,
+      percentagePerformance: performancePercentage,
+      sinceBuyValue: 0
+    });
+
+    performanceEuroLast = diffValues?.absolutePerformanceDiff ?? 0;
+    performancePercentageLast = diffValues?.percentageDiff ?? 0;
     lastTimestamp = lastEntry.timestamp ?? "Never";
   }
 
-  if (shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
-  } else {
-    logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
-  }
+  refreshPortfolioSnapshot(false);
 
-  const headerTable = parentDiv.parentNode;
+  const headerTable = portfolioSummary.parentDiv.parentNode;
   if (headerTable) {
     changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
     headerTable.appendChild(createNewHeaderDiv());
@@ -151,5 +223,44 @@ function initPortfolioDiff() {
 
   addNewColumnHeader();
 }
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  if (!message?.type) {
+    return false;
+  }
+
+  if (message.type === "popup:getSnapshotStatus") {
+    sendResponse({ ok: true, status: getPopupSnapshotStatus() });
+    return false;
+  }
+
+  if (message.type === "popup:refreshSnapshotsNow") {
+    const portfolioRefreshResult = refreshPortfolioSnapshot(true);
+    const positionRefreshResult = refreshPositionSnapshots(true);
+
+    sendResponse({
+      ok: true,
+      refreshedPortfolioSnapshot: portfolioRefreshResult.refreshed,
+      refreshedPositions: positionRefreshResult.refreshedCount
+    });
+
+    setTimeout(function() {
+      window.location.reload();
+    }, 100);
+    return false;
+  }
+
+  if (message.type === "popup:resetSnapshots") {
+    resetPortfolioSnapshots();
+    sendResponse({ ok: true });
+
+    setTimeout(function() {
+      window.location.reload();
+    }, 100);
+    return false;
+  }
+
+  return false;
+});
 
 initPortfolioDiff();

@@ -1,6 +1,177 @@
-<html>
-    <body>
-        <p>Finanzen.net zeigt nun die Änderung deines Depots, seit deinem letzten Aufruf</p>
-        <script src="popup.js"></script>
-    </body>
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Finanzen.net Depot Diff</title>
+    <style>
+      :root {
+        --bg: #f3efe7;
+        --panel: #fffaf2;
+        --text: #1d2a24;
+        --muted: #5e6b65;
+        --accent: #0b6e4f;
+        --accent-strong: #084c38;
+        --danger: #b42318;
+        --border: #d9d1c2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top left, rgba(11, 110, 79, 0.12), transparent 42%),
+          linear-gradient(180deg, #f7f1e6 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      main {
+        padding: 16px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(29, 42, 36, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        line-height: 1.1;
+      }
+
+      .lede {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .meta {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+      }
+
+      .meta-label {
+        color: var(--muted);
+      }
+
+      .meta-value {
+        text-align: right;
+        font-weight: 700;
+      }
+
+      .status {
+        min-height: 38px;
+        margin-bottom: 16px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(11, 110, 79, 0.08);
+        color: var(--accent-strong);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .status.is-error {
+        background: rgba(180, 35, 24, 0.12);
+        color: var(--danger);
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 11px 14px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      button:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+
+      .button-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .button-secondary {
+        background: #e6ddd0;
+        color: var(--text);
+      }
+
+      .button-danger {
+        background: #f7d8d4;
+        color: #7a140d;
+      }
+
+      .footer {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Depot Snapshot</h1>
+        <p class="lede">Steuere den Referenzstand fuer die Diff-Anzeige direkt auf der aktiven Depotseite.</p>
+
+        <div class="meta">
+          <div class="meta-row">
+            <span class="meta-label">Intervall</span>
+            <span class="meta-value" id="snapshot-interval">-</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Letzter Snapshot</span>
+            <span class="meta-value" id="snapshot-age">-</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Gespeicherte Eintraege</span>
+            <span class="meta-value" id="entry-count">-</span>
+          </div>
+        </div>
+
+        <div class="status" id="status-message">Verbinde mit aktiver Depotseite...</div>
+
+        <div class="actions">
+          <button class="button-primary" id="refresh-snapshots" type="button">Snapshot jetzt aktualisieren</button>
+          <button class="button-danger" id="reset-snapshots" type="button">Snapshots zuruecksetzen</button>
+        </div>
+
+        <div class="footer" id="version-label"></div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
 </html>
