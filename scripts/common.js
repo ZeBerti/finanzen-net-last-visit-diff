@@ -203,6 +203,15 @@ function formatPercent (num) {
     }) + " %";
 }
 
+function formatPercentagePoints(num) {
+    if (isNaN(num))
+        return num;
+    return num.toLocaleString("de-DE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " %-Pkt.";
+}
+
 
 // Suche nach dem Element mit einem Text, der im Text des Elements enthalten ist und keine untergeordneten Elemente hat
 function findElementWithText(parentElement, domType, text) {

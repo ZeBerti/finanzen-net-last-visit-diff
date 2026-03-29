@@ -325,11 +325,18 @@ function addNewColumnHeader() {
                 tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
                 tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
 
-                tdCopy.setAttribute("title", "Aktueller Kurs: " + getEntryCurrentValue(lastShareEntry) + " - " + parsedRow.currentValue +
-                 "\nProzent: " + formatPercent(diffValues.percentageDiff) +
-                 "\nSeit Kauf: " + formatEuro(diffValues.sinceBuyDiff) +
-                 "\nMatching: " + (positionIdentity.mode === "stable" ? "stabil via pkdepdatennr" : `degradiert via ${positionIdentity.reason}`) +
-                 "\nSnapshot-Alter: " + formatSnapshotAge(lastShareEntry));
+                const tooltipLines = [
+                    `Aktueller Kurs: ${formatEuro(getEntryCurrentValue(lastShareEntry))} - ${formatEuro(parsedRow.currentValue)} = ${formatEuro(diffValues.currentValueDiff)}`,
+                    `Performance: ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} - ${formatPercent(parsedRow.percentagePerformance)} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
+                    `Wertentwicklung gesamt: ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} - ${formatEuro(parsedRow.sinceBuyValue)} = ${formatEuro(diffValues.sinceBuyDiff)}`,
+                    `Snapshot-Alter: ${formatSnapshotAge(lastShareEntry)}`
+                ];
+
+                if (positionIdentity.mode !== "stable") {
+                    tooltipLines.push(`Matching: degradiert via ${positionIdentity.reason}`);
+                }
+
+                tdCopy.setAttribute("title", tooltipLines.join("\n"));
                 positionRow.insertBefore(tdCopy, parsedRow.performanceCell);
 
             }
