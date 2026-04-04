@@ -157,7 +157,7 @@ let lastTimestamp = "Never";
 function getPortfolioSummaryElements() {
   const perfGesamtDiv = findDivWithText("Perf. gesamt");
   if (!perfGesamtDiv?.parentNode) {
-    logWarn("Perf. gesamt section not found. Skipping extension rendering.");
+    logDebug("Portfolio summary not available on this page. Skipping extension rendering.");
     return null;
   }
 
@@ -168,7 +168,7 @@ function getPortfolioSummaryElements() {
   const gesamtwertElement = gesamtwertLabel?.parentNode?.children?.[1];
 
   if (!performanceEuroElement || !performancePercentageElement || !gesamtwertElement) {
-    logWarn("Required portfolio summary elements not found. Skipping extension rendering.");
+    logDebug("Portfolio summary is incomplete on this page. Skipping extension rendering.");
     return null;
   }
 
