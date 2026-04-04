@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Finanzen.net Depot Diff",
   "description": "Extension for finanzen.net to show the diff of your portfolio since last login",
-  "version": "0.2.24",
+  "version": "0.2.25",
   "permissions": ["tabs", "storage"],
   "action": {
     "default_popup": "options.html",

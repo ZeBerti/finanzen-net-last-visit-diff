@@ -120,17 +120,21 @@ function createNewHeaderDiv() {
     const spanA2 = document.createElement('span');
 
     // check balance pos or neg
-    if (performanceEuroLast < 0) {
+    if (lastTimestamp === "Never") {
+        spanA2.className = '';
+        spanA2.innerHTML = "n/a";
+    } else if (performanceEuroLast < 0) {
         spanA2.className = 'font-color-red';
+        spanA2.innerHTML = formatEuro(performanceEuroLast);
     } else {
         spanA2.className = 'font-color-green';
+        spanA2.innerHTML = formatEuro(performanceEuroLast);
     }
-    spanA2.innerHTML = formatEuro(performanceEuroLast);
 
     // Erstelle ein span-Element für den WERT-B und den Prozentsatz
     const spanB = document.createElement('span');
     spanB.className = spanA2.className;
-    spanB.innerHTML = formatPercent(performancePercentageLast);
+    spanB.innerHTML = lastTimestamp === "Never" ? "n/a" : formatPercent(performancePercentageLast);
 
     // Füge die erstellten Elemente in die Struktur ein
     innerDiv2.appendChild(spanA);
