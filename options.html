@@ -118,6 +118,17 @@
         opacity: 0.6;
       }
 
+      select {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font: inherit;
+        font-size: 14px;
+        background: #fff;
+        color: var(--text);
+      }
+
       .button-primary {
         background: var(--accent);
         color: #fff;
@@ -149,7 +160,15 @@
         <div class="meta">
           <div class="meta-row">
             <span class="meta-label">Intervall</span>
-            <span class="meta-value" id="snapshot-interval">-</span>
+            <label class="meta-value" for="snapshot-interval-select">
+              <select id="snapshot-interval-select">
+                <option value="900000">15 Minuten</option>
+                <option value="3600000">1 Stunde</option>
+                <option value="7200000">2 Stunden</option>
+                <option value="21600000">6 Stunden</option>
+                <option value="86400000">24 Stunden</option>
+              </select>
+            </label>
           </div>
           <div class="meta-row">
             <span class="meta-label">Letzter Snapshot</span>

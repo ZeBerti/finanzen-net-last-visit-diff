@@ -23,6 +23,7 @@ const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 const pkdepnr = urlParams.get('pkdepnr') || 'default';
 let DATABASE_KEY = "finanzen_net_extension_" + pkdepnr;
+let snapshotMinAgeMs = DEFAULT_SNAPSHOT_MIN_AGE_MS;
 
 // functions ######
 // findDivWithText(text)
@@ -200,11 +201,11 @@ function getLastPortfolioSnapshotEntry() {
 
 function shouldRefreshPortfolioSnapshots(forceRefreshSnapshot) {
   const lastEntry = getLastPortfolioSnapshotEntry();
-  if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
+  if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, snapshotMinAgeMs)) {
     return true;
   }
 
-  logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
+  logInfo(`Skipping portfolio snapshot refresh because the last snapshot is younger than ${formatSnapshotIntervalLabel(snapshotMinAgeMs)}.`);
   return false;
 }
 
@@ -238,7 +239,7 @@ function getPopupSnapshotStatus() {
   return {
     databaseKey: DATABASE_KEY,
     entryCount: entries.length,
-    snapshotIntervalLabel: "2 Stunden",
+    snapshotIntervalLabel: formatSnapshotIntervalLabel(snapshotMinAgeMs),
     hasSnapshot: Boolean(portfolioEntry),
     lastSnapshotTimestamp: portfolioEntry?.timestamp ?? null,
     lastSnapshotAge: portfolioEntry ? formatSnapshotAge(portfolioEntry) : "kein Snapshot",
@@ -250,7 +251,14 @@ function resetPortfolioSnapshots() {
   localStorage.removeItem(DATABASE_KEY);
 }
 
-function initPortfolioDiff() {
+async function initPortfolioDiff() {
+  try {
+    snapshotMinAgeMs = await getSnapshotMinAgeMs();
+  } catch (error) {
+    logWarn(`Failed to load snapshot interval setting: ${error}`);
+    snapshotMinAgeMs = DEFAULT_SNAPSHOT_MIN_AGE_MS;
+  }
+
   const portfolioSummary = getCurrentPortfolioSummary();
   if (!portfolioSummary) {
     return;
@@ -304,6 +312,16 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 
   if (message.type === "popup:getSnapshotStatus") {
     sendResponse({ ok: true, status: getPopupSnapshotStatus() });
+    return false;
+  }
+
+  if (message.type === "popup:updateSnapshotInterval") {
+    snapshotMinAgeMs = Number(message.intervalMs) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+    sendResponse({ ok: true });
+
+    setTimeout(function() {
+      window.location.reload();
+    }, 100);
     return false;
   }
 

@@ -25,7 +25,8 @@ function getStorageEntryKey(entry) {
 }
 
 const LOG_PREFIX = "[FinanzenDotNetDiff]";
-const SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+const DEFAULT_SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+const SNAPSHOT_INTERVAL_SETTING_KEY = "snapshotMinAgeMs";
 
 function logDebug(message, ...args) {
   console.log(LOG_PREFIX, message, ...args);
@@ -225,6 +226,44 @@ function formatPercentagePoints(num) {
     }) + " %-Pkt.";
 }
 
+function formatSnapshotIntervalLabel(intervalMs) {
+    const totalMinutes = intervalMs / (60 * 1000);
+    if (totalMinutes < 60) {
+        return `${totalMinutes} Minuten`;
+    }
+
+    const totalHours = totalMinutes / 60;
+    if (totalHours === 1) {
+        return "1 Stunde";
+    }
+
+    return `${totalHours} Stunden`;
+}
+
+function readExtensionStorage(defaultValues) {
+  return new Promise(function(resolve, reject) {
+    if (typeof chrome === "undefined" || !chrome.storage?.local) {
+      resolve(defaultValues);
+      return;
+    }
+
+    chrome.storage.local.get(defaultValues, function(result) {
+      const error = chrome.runtime?.lastError;
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(result);
+    });
+  });
+}
+
+async function getSnapshotMinAgeMs() {
+  const settings = await readExtensionStorage({ [SNAPSHOT_INTERVAL_SETTING_KEY]: DEFAULT_SNAPSHOT_MIN_AGE_MS });
+  return Number(settings[SNAPSHOT_INTERVAL_SETTING_KEY]) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+}
+
 
 // Suche nach dem Element mit einem Text, der im Text des Elements enthalten ist und keine untergeordneten Elemente hat
 function findElementWithText(parentElement, domType, text) {
@@ -292,4 +331,18 @@ function findElementWithText(parentElement, domType, text) {
     // Save database to localStorage
     writeToStorage(databaseKey, database);
 
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    DEFAULT_SNAPSHOT_MIN_AGE_MS,
+    SNAPSHOT_INTERVAL_SETTING_KEY,
+    calculateDiffValues,
+    formatPercent,
+    formatPercentagePoints,
+    formatSnapshotAge,
+    formatSnapshotIntervalLabel,
+    hasSnapshotValuesChanged,
+    shouldRefreshSnapshot
+  };
 }

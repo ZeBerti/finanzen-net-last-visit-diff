@@ -1,10 +1,26 @@
 const statusMessageElement = document.getElementById("status-message");
-const snapshotIntervalElement = document.getElementById("snapshot-interval");
+const snapshotIntervalSelectElement = document.getElementById("snapshot-interval-select");
 const snapshotAgeElement = document.getElementById("snapshot-age");
 const entryCountElement = document.getElementById("entry-count");
 const refreshButton = document.getElementById("refresh-snapshots");
 const resetButton = document.getElementById("reset-snapshots");
 const versionLabelElement = document.getElementById("version-label");
+const SNAPSHOT_INTERVAL_SETTING_KEY = "snapshotMinAgeMs";
+const DEFAULT_SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+
+function formatSnapshotIntervalLabel(intervalMs) {
+  const totalMinutes = intervalMs / (60 * 1000);
+  if (totalMinutes < 60) {
+    return `${totalMinutes} Minuten`;
+  }
+
+  const totalHours = totalMinutes / 60;
+  if (totalHours === 1) {
+    return "1 Stunde";
+  }
+
+  return `${totalHours} Stunden`;
+}
 
 function setStatus(message, isError) {
   statusMessageElement.textContent = message;
@@ -14,6 +30,7 @@ function setStatus(message, isError) {
 function setButtonsDisabled(isDisabled) {
   refreshButton.disabled = isDisabled;
   resetButton.disabled = isDisabled;
+  snapshotIntervalSelectElement.disabled = isDisabled;
 }
 
 async function getActiveTab() {
@@ -30,8 +47,16 @@ async function sendMessageToActiveTab(message) {
   return chrome.tabs.sendMessage(activeTab.id, message);
 }
 
+async function loadSnapshotIntervalSetting() {
+  const settings = await chrome.storage.local.get({ [SNAPSHOT_INTERVAL_SETTING_KEY]: DEFAULT_SNAPSHOT_MIN_AGE_MS });
+  return Number(settings[SNAPSHOT_INTERVAL_SETTING_KEY]) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+}
+
+async function saveSnapshotIntervalSetting(intervalMs) {
+  await chrome.storage.local.set({ [SNAPSHOT_INTERVAL_SETTING_KEY]: intervalMs });
+}
+
 function renderStatus(status) {
-  snapshotIntervalElement.textContent = status.snapshotIntervalLabel || "-";
   snapshotAgeElement.textContent = status.lastSnapshotAge || "kein Snapshot";
   entryCountElement.textContent = String(status.entryCount ?? 0);
   versionLabelElement.textContent = `Extension v${status.version || chrome.runtime.getManifest().version}`;
@@ -48,6 +73,9 @@ async function refreshStatus() {
   setStatus("Lese Snapshot-Status...", false);
 
   try {
+    const intervalMs = await loadSnapshotIntervalSetting();
+    snapshotIntervalSelectElement.value = String(intervalMs);
+    snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
     const response = await sendMessageToActiveTab({ type: "popup:getSnapshotStatus" });
     if (!response?.ok || !response.status) {
       throw new Error("Keine gueltige Antwort von der Depotseite.");
@@ -56,7 +84,9 @@ async function refreshStatus() {
     renderStatus(response.status);
     setButtonsDisabled(false);
   } catch (error) {
-    snapshotIntervalElement.textContent = "-";
+    const intervalMs = await loadSnapshotIntervalSetting();
+    snapshotIntervalSelectElement.value = String(intervalMs);
+    snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
     snapshotAgeElement.textContent = "-";
     entryCountElement.textContent = "-";
     versionLabelElement.textContent = `Extension v${chrome.runtime.getManifest().version}`;
@@ -81,6 +111,31 @@ async function runAction(message, pendingText) {
     setButtonsDisabled(false);
   }
 }
+
+snapshotIntervalSelectElement.addEventListener("change", async function(event) {
+  const intervalMs = Number(event.target.value) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+  setButtonsDisabled(true);
+  setStatus("Speichere Snapshot-Intervall...", false);
+
+  try {
+    await saveSnapshotIntervalSetting(intervalMs);
+    snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
+
+    try {
+      await sendMessageToActiveTab({ type: "popup:updateSnapshotInterval", intervalMs: intervalMs });
+      setStatus("Snapshot-Intervall gespeichert. Die Depotseite wird neu geladen.", false);
+      window.close();
+      return;
+    } catch (error) {
+      setStatus("Snapshot-Intervall gespeichert. Wirksam auf der naechsten Depotseite.", false);
+    }
+
+    setButtonsDisabled(false);
+  } catch (error) {
+    setStatus("Snapshot-Intervall konnte nicht gespeichert werden.", true);
+    setButtonsDisabled(false);
+  }
+});
 
 refreshButton.addEventListener("click", function() {
   runAction({ type: "popup:refreshSnapshotsNow" }, "Speichere aktuellen Stand als Snapshot...");
