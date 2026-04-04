@@ -80,6 +80,25 @@ function normalizeSummaryDisplay(summaryContainer) {
   });
 }
 
+function formatSnapshotTimestampLabel(timestamp) {
+  if (!timestamp || timestamp === "Never") {
+    return "letztem Besuch";
+  }
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "letztem Besuch";
+  }
+
+  return date.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function createNewHeaderDiv() {
     // Erstelle ein neues div-Element für das Child
     const newChildDiv = document.createElement('div');
@@ -87,7 +106,7 @@ function createNewHeaderDiv() {
 
     // Erstelle ein inneres div-Element für den ersten Text
     const innerDiv1 = document.createElement('div');
-    innerDiv1.textContent = 'Perf. seit letztem Besuch';
+    innerDiv1.textContent = `Perf. seit ${formatSnapshotTimestampLabel(lastTimestamp)}`;
     innerDiv1.setAttribute("title", lastTimestamp);
 
     // Erstelle ein inneres div-Element für den zweiten Text und den Prozentsatz
