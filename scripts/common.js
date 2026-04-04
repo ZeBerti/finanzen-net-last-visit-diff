@@ -110,6 +110,19 @@ function shouldRefreshSnapshot(entry, minAgeMs) {
   return (Date.now() - lastTimestampMs) >= minAgeMs;
 }
 
+function hasSnapshotValuesChanged(previousEntry, currentValues) {
+  if (!previousEntry) {
+    return true;
+  }
+
+  return (
+    getEntryCurrentValue(previousEntry) !== extractNumber(currentValues?.currentValue) ||
+    getEntryAbsolutePerformance(previousEntry) !== extractNumber(currentValues?.absolutePerformance) ||
+    getEntryPercentagePerformance(previousEntry) !== extractNumber(currentValues?.percentagePerformance) ||
+    getEntryValueSinceBuy(previousEntry) !== extractNumber(currentValues?.sinceBuyValue)
+  );
+}
+
 function formatSnapshotAge(entry) {
   const lastTimestampMs = getEntryTimestampMs(entry);
   if (lastTimestampMs === null) {

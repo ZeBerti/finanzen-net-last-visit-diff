@@ -198,6 +198,16 @@ function getLastPortfolioSnapshotEntry() {
   return entries.find((entry) => entry?.key === "portfolio:gesamt") || null;
 }
 
+function shouldRefreshPortfolioSnapshots(forceRefreshSnapshot) {
+  const lastEntry = getLastPortfolioSnapshotEntry();
+  if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
+    return true;
+  }
+
+  logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
+  return false;
+}
+
 function refreshPortfolioSnapshot(forceRefreshSnapshot) {
   const portfolioSummary = getCurrentPortfolioSummary();
   if (!portfolioSummary) {
@@ -205,13 +215,19 @@ function refreshPortfolioSnapshot(forceRefreshSnapshot) {
   }
 
   const lastEntry = getLastPortfolioSnapshotEntry();
+  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(forceRefreshSnapshot);
+  const portfolioValues = {
+    currentValue: portfolioSummary.gesamtwert,
+    absolutePerformance: portfolioSummary.performanceEuro,
+    percentagePerformance: portfolioSummary.performancePercentage,
+    sinceBuyValue: 0
+  };
 
-  if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, SNAPSHOT_MIN_AGE_MS)) {
+  if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, portfolioValues)) {
     saveToDatabase(DATABASE_KEY, "Gesamt", 0, portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, portfolioSummary.performancePercentage, 0, "portfolio:gesamt");
     return { refreshed: true, timestamp: getCurrentTimestamp() };
   }
 
-  logInfo("Skipping portfolio snapshot refresh because the last snapshot is younger than 2 hours.");
   return { refreshed: false, timestamp: lastEntry?.timestamp ?? null };
 }
 
@@ -261,7 +277,15 @@ function initPortfolioDiff() {
     lastTimestamp = lastEntry.timestamp ?? "Never";
   }
 
-  refreshPortfolioSnapshot(false);
+  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(false);
+  if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, {
+    currentValue: gesamtwert,
+    absolutePerformance: performanceEuro,
+    percentagePerformance: performancePercentage,
+    sinceBuyValue: 0
+  })) {
+    saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
+  }
 
   const headerTable = portfolioSummary.parentDiv.parentNode;
   if (headerTable) {
@@ -270,7 +294,7 @@ function initPortfolioDiff() {
     headerTable.appendChild(createNewHeaderDiv());
   }
 
-  addNewColumnHeader();
+  addNewColumnHeader(shouldPersistSnapshot);
 }
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
@@ -285,7 +309,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 
   if (message.type === "popup:refreshSnapshotsNow") {
     const portfolioRefreshResult = refreshPortfolioSnapshot(true);
-    const positionRefreshResult = refreshPositionSnapshots(true);
+    const positionRefreshResult = refreshPositionSnapshots(portfolioRefreshResult.refreshed);
 
     sendResponse({
       ok: true,

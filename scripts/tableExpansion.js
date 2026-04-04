@@ -190,12 +190,17 @@ function getPortfolioTableState() {
     };
 }
 
-function saveParsedRowSnapshot(parsedRow, forceRefreshSnapshot) {
+function saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot) {
     const positionStorageKey = parsedRow.positionIdentity.storageKey;
-    const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
-    const lastShareEntry = sharesZuletzt.get(positionStorageKey);
 
-    if (forceRefreshSnapshot || shouldRefreshSnapshot(lastShareEntry, SNAPSHOT_MIN_AGE_MS)) {
+    const shouldSaveMissingSnapshot = !lastShareEntry;
+
+    if ((shouldPersistSnapshot || shouldSaveMissingSnapshot) && hasSnapshotValuesChanged(lastShareEntry, {
+        currentValue: parsedRow.currentValue,
+        absolutePerformance: parsedRow.absolutePerformance,
+        percentagePerformance: parsedRow.percentagePerformance,
+        sinceBuyValue: parsedRow.sinceBuyValue
+    })) {
         saveToDatabase(
             DATABASE_KEY,
             parsedRow.shareName,
@@ -206,14 +211,10 @@ function saveParsedRowSnapshot(parsedRow, forceRefreshSnapshot) {
             parsedRow.sinceBuyValue,
             positionStorageKey
         );
-    } else {
-        logInfo(`Skipping snapshot refresh for '${parsedRow.shareName}' because the last snapshot is younger than 2 hours.`);
     }
-
-    return lastShareEntry;
 }
 
-function refreshPositionSnapshots(forceRefreshSnapshot) {
+function refreshPositionSnapshots(shouldPersistSnapshot) {
     const tableState = getPortfolioTableState();
     if (!tableState) {
         return { refreshedCount: 0 };
@@ -232,14 +233,18 @@ function refreshPositionSnapshots(forceRefreshSnapshot) {
             return;
         }
 
-        saveParsedRowSnapshot(parsedRow, forceRefreshSnapshot);
+        const positionStorageKey = parsedRow.positionIdentity.storageKey;
+        const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
+        const lastShareEntry = sharesZuletzt.get(positionStorageKey);
+
+        saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot);
         refreshedCount += 1;
     });
 
     return { refreshedCount: refreshedCount };
 }
 
-function addNewColumnHeader() {
+function addNewColumnHeader(shouldPersistSnapshot) {
     const tableState = getPortfolioTableState();
     if (!tableState) {
         return;
@@ -305,7 +310,7 @@ function addNewColumnHeader() {
                     sinceBuyValue: parsedRow.sinceBuyValue
                 });
 
-                saveParsedRowSnapshot(parsedRow, false);
+                saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot);
 
                 let tdCopy = parsedRow.performanceCell.cloneNode(true);
 
