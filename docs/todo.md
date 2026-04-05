@@ -1,7 +1,6 @@
 # TODO
 
 ## Produkt
-- Snapshot-Intervall im Popup konfigurierbar machen statt fest auf 2 Stunden.
 - Letzten Snapshot-Zeitpunkt im Popup zusaetzlich zum Snapshot-Alter anzeigen.
 - Sortierung der Tabelle nach `± zuletzt` pruefen und bei Bedarf ergaenzen.
 - Visuelles Highlight fuer starke Aenderungen seit dem letzten Snapshot pruefen.
@@ -15,8 +14,8 @@
 - `content.js` weiter aufteilen: Header-Rendering, Snapshot-Logik und Message-Handling staerker trennen.
 - Diff-Zellen-Erzeugung in `tableExpansion.js` weiter vereinheitlichen.
 - Reine Helfer wie `calculateDiffValues`, `formatPercent`, `formatSnapshotAge` und `formatPercentagePoints` mit kleinen Tests absichern.
+- Persistiertes Schema verschlanken: pruefen, ob `name` und `productIndex` aus dem gespeicherten Format entfernt werden koennen.
 - Mittelfristig pruefen, ob `localStorage` durch `chrome.storage.local` ersetzt werden soll.
 
 ## Doku
-- Popup-Snapshot-Steuerung in `local-storage-schema.md` dokumentieren.
 - Tooltip-Logik und aktuelle Snapshot-Policy in den Doku-Dateien aktualisieren.

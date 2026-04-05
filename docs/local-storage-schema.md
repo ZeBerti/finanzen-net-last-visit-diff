@@ -10,7 +10,10 @@
 - Der Wert unter dem Key ist ein JSON-Array.
 - Jeder Eintrag repraesentiert den zuletzt bekannten Stand fuer `Gesamt` oder eine einzelne Position.
 - Es wird nur noch dieses Schema unterstuetzt.
-- Ein Snapshot wird nur erneuert, wenn der letzte gespeicherte Stand mindestens 2 Stunden alt ist.
+- Das Snapshot-Intervall ist ueber das Popup konfigurierbar.
+- Ein Snapshot wird nur erneuert, wenn:
+  - das konfigurierte Intervall abgelaufen ist, und
+  - sich die gespeicherten Werte gegenueber dem aktuellen Stand geaendert haben.
 
 ## Eintragsstruktur
 ```json
@@ -27,18 +30,12 @@
 ```
 
 ## Feldbedeutung
-- `name`
-  - Anzeige- und Fachname des Eintrags.
-  - Fuer das Gesamtdepot wird aktuell `Gesamt` verwendet.
 - `key`
   - Interner Persistenzschluessel fuer eindeutiges Matching.
   - Fuer das Gesamtdepot aktuell `portfolio:gesamt`.
   - Fuer einzelne Positionen bevorzugt `depot-entry:<pkdepdatennr>`.
   - Falls diese ID im DOM nicht verfuegbar ist, wird auf `isin:<isin>#<n>` und zuletzt `name:<name>#<n>` zurueckgefallen.
   - Die beiden Fallbacks gelten ausdruecklich als degradierter Modus und nicht als gleichwertige Identifikation.
-- `productIndex`
-  - Auftretensindex eines sichtbaren Namens innerhalb der aktuellen Tabelle.
-  - Wird nur als Fallback und Zusatzkontext gespeichert.
 - `currentValue`
   - Aktueller Kurs bzw. aktueller Einzelwert der Position aus der Tabelle.
   - Beim Eintrag `Gesamt` wird hier der aktuelle Gesamtwert des Depots gespeichert.
@@ -46,15 +43,23 @@
   - Zeitpunkt des letzten Speicherns in ISO-8601.
 - `absolutePerformance`
   - Absoluter Performance-Wert der Position bzw. des Gesamtdepots zum letzten Abruf.
+  - Wird aktuell vor allem fuer den Header des Gesamtdepots benoetigt.
 - `percentagePerformance`
   - Prozentuale Performance der Position bzw. des Gesamtdepots zum letzten Abruf.
 - `sinceBuyValue`
   - Absolute Wertentwicklung seit Kauf fuer die Position.
   - Beim Eintrag `Gesamt` wird aktuell `0` gespeichert.
+- `name`
+  - Nur Metadatum fuer Lesbarkeit und Debugging.
+  - Fuer die Berechnung der Diffs nicht erforderlich.
+- `productIndex`
+  - Nur Metadatum fuer Fallback-/Diagnosezwecke.
+  - Fuer persistentes Matching nicht erforderlich, solange `key` stabil ist.
 
 ## Bekannte Schwaechen
 - Fallbacks ueber `isin + Index` oder `name + Index` sind weniger robust als `pkdepdatennr`.
-- Das Schema ist historisch gewachsen und noch nicht als bewusstes Datenmodell konsolidiert.
+- Das Schema enthaelt noch Metadaten (`name`, `productIndex`), die fachlich nicht zwingend fuer die Berechnung noetig sind.
+- `absolutePerformance` ist derzeit nur teilweise fachlich begruendet und sollte bei einer spaeteren Schema-Bereinigung gezielt neu bewertet werden.
 
 ## Hinweis zu Alt-Daten
 - Aeltere `localStorage`-Eintraege im frueheren Format werden nicht mehr ausgewertet.
@@ -64,8 +69,9 @@
 - Diffs werden immer gegen den zuletzt gespeicherten Snapshot berechnet.
 - Ein neuer Snapshot wird nur geschrieben, wenn:
   - noch kein Eintrag existiert, oder
-  - der letzte Eintrag mindestens 2 Stunden alt ist.
-- Mehrfaches Reloaden innerhalb dieses Fensters ueberschreibt den Referenzstand deshalb nicht.
+  - das konfigurierte Intervall abgelaufen ist und sich Werte geaendert haben.
+- Mehrfaches Reloaden ohne Wertaenderung ueberschreibt den Referenzstand deshalb nicht.
+- Fehlende Positions-Snapshots duerfen trotzdem initial angelegt werden, auch wenn der Portfolio-Snapshot selbst nicht erneuert wird.
 
 ## Aktuelle Nutzung im Code
 - Lesen und Schreiben:
@@ -78,3 +84,4 @@
 ## Geplante Richtung
 - Semantik zwischen Gesamtdepot und Einzelpositionen expliziter trennen.
 - Fallback-Matching nur als Notbetrieb behandeln und im UI bzw. Logging klar kennzeichnen.
+- Persistiertes Schema weiter verschlanken, insbesondere `name` und `productIndex`.
