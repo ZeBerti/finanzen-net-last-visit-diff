@@ -52,7 +52,6 @@ function normalizeStorageEntry(entry) {
   const normalizedEntry = {
     key: getStorageEntryKey(entry),
     name: entry.name || "Unbekannt",
-    productIndex: entry.productIndex ?? 0,
     currentValue: extractNumber(entry.currentValue),
     absolutePerformance: extractNumber(entry.absolutePerformance),
     percentagePerformance: extractNumber(entry.percentagePerformance),
@@ -283,9 +282,8 @@ function findElementWithText(parentElement, domType, text) {
 /**
  databaseKey: name of the browser interna database
  productName: produkt name, e.g. alphabet
- productIndex: there may be several <productName> entries. This variable counts it (e.g. 'alphabet' -> 2)
 **/
- function saveToDatabase(databaseKey, productName, productIndex, currentValue, absolutePerformance, percentagePerformance, sinceBuyValue, entryKey) {
+ function saveToDatabase(databaseKey, productName, currentValue, absolutePerformance, percentagePerformance, sinceBuyValue, entryKey) {
 
   //const name = document.getElementById('name').value;
   const timestamp = getCurrentTimestamp();
@@ -310,14 +308,12 @@ function findElementWithText(parentElement, domType, text) {
     database[existingEntryIndex].percentagePerformance = extractNumber(percentagePerformance);
     database[existingEntryIndex].timestamp = timestamp;
     database[existingEntryIndex].sinceBuyValue = extractNumber(sinceBuyValue);
-    database[existingEntryIndex].productIndex = productIndex;
     logDebug(`Entry '${productName}' updated in database.`);
   } else {
     // Create a new entry
     const entry = {
       key: resolvedEntryKey,
       name: productName,
-      productIndex: productIndex,
       currentValue: extractNumber(currentValue),
       timestamp: timestamp,
       absolutePerformance: extractNumber(absolutePerformance),

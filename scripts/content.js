@@ -229,7 +229,7 @@ function refreshPortfolioSnapshot(forceRefreshSnapshot) {
   };
 
   if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, portfolioValues)) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", 0, portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, portfolioSummary.performancePercentage, 0, "portfolio:gesamt");
+    saveToDatabase(DATABASE_KEY, "Gesamt", portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, portfolioSummary.performancePercentage, 0, "portfolio:gesamt");
     return { refreshed: true, timestamp: getCurrentTimestamp() };
   }
 
@@ -296,7 +296,7 @@ async function initPortfolioDiff() {
     percentagePerformance: performancePercentage,
     sinceBuyValue: 0
   })) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", 0, gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
+    saveToDatabase(DATABASE_KEY, "Gesamt", gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
   }
 
   const headerTable = portfolioSummary.parentDiv.parentNode;

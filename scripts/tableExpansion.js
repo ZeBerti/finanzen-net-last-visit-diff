@@ -204,7 +204,6 @@ function saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot)
         saveToDatabase(
             DATABASE_KEY,
             parsedRow.shareName,
-            parsedRow.productIndex,
             parsedRow.currentValue,
             parsedRow.absolutePerformance,
             parsedRow.percentagePerformance,

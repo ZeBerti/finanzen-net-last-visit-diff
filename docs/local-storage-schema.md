@@ -20,7 +20,6 @@
 {
   "key": "depot-entry:17752047",
   "name": "Gesamt oder Positionsname",
-  "productIndex": 1,
   "currentValue": 123.45,
   "timestamp": "2026-03-15T21:00:00.000Z",
   "absolutePerformance": 456.78,
@@ -52,13 +51,10 @@
 - `name`
   - Nur Metadatum fuer Lesbarkeit und Debugging.
   - Fuer die Berechnung der Diffs nicht erforderlich.
-- `productIndex`
-  - Nur Metadatum fuer Fallback-/Diagnosezwecke.
-  - Fuer persistentes Matching nicht erforderlich, solange `key` stabil ist.
 
 ## Bekannte Schwaechen
 - Fallbacks ueber `isin + Index` oder `name + Index` sind weniger robust als `pkdepdatennr`.
-- Das Schema enthaelt noch Metadaten (`name`, `productIndex`), die fachlich nicht zwingend fuer die Berechnung noetig sind.
+- Das Schema enthaelt noch Metadaten (`name`), die fachlich nicht zwingend fuer die Berechnung noetig sind.
 - `absolutePerformance` ist derzeit nur teilweise fachlich begruendet und sollte bei einer spaeteren Schema-Bereinigung gezielt neu bewertet werden.
 
 ## Hinweis zu Alt-Daten
@@ -84,4 +80,4 @@
 ## Geplante Richtung
 - Semantik zwischen Gesamtdepot und Einzelpositionen expliziter trennen.
 - Fallback-Matching nur als Notbetrieb behandeln und im UI bzw. Logging klar kennzeichnen.
-- Persistiertes Schema weiter verschlanken, insbesondere `name` und `productIndex`.
+- Persistiertes Schema weiter verschlanken, insbesondere `name`.

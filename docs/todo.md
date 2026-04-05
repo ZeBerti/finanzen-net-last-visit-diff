@@ -14,7 +14,7 @@
 - `content.js` weiter aufteilen: Header-Rendering, Snapshot-Logik und Message-Handling staerker trennen.
 - Diff-Zellen-Erzeugung in `tableExpansion.js` weiter vereinheitlichen.
 - Reine Helfer wie `calculateDiffValues`, `formatPercent`, `formatSnapshotAge` und `formatPercentagePoints` mit kleinen Tests absichern.
-- Persistiertes Schema verschlanken: pruefen, ob `name` und `productIndex` aus dem gespeicherten Format entfernt werden koennen.
+- Persistiertes Schema verschlanken: pruefen, ob `name` spaeter ebenfalls aus dem gespeicherten Format entfernt werden kann.
 - Mittelfristig pruefen, ob `localStorage` durch `chrome.storage.local` ersetzt werden soll.
 
 ## Doku
