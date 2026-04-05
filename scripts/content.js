@@ -24,6 +24,8 @@ const urlParams = new URLSearchParams(queryString);
 const pkdepnr = urlParams.get('pkdepnr') || 'default';
 let DATABASE_KEY = "finanzen_net_extension_" + pkdepnr;
 let snapshotMinAgeMs = DEFAULT_SNAPSHOT_MIN_AGE_MS;
+let testPriceJitterEnabled = false;
+let testPriceJitterPercent = 5;
 
 // functions ######
 // findDivWithText(text)
@@ -166,7 +168,7 @@ function getPortfolioSummaryElements() {
   }
 
   const parentDiv = perfGesamtDiv.parentNode;
-  const performanceEuroElement = findElementWithText(parentDiv, "span", "EUR");
+  const performanceEuroElement = findElementWithText(parentDiv, "span", "EUR") || findElementWithText(parentDiv, "span", "€");
   const performancePercentageElement = findElementWithText(parentDiv, "span", "%");
   const gesamtwertLabel = findDivWithText("Gesamtwert");
   const gesamtwertElement = gesamtwertLabel?.parentNode?.children?.[1];
@@ -247,6 +249,8 @@ function getPopupSnapshotStatus() {
     hasSnapshot: Boolean(portfolioEntry),
     lastSnapshotTimestamp: portfolioEntry?.timestamp ?? null,
     lastSnapshotAge: portfolioEntry ? formatSnapshotAge(portfolioEntry) : "kein Snapshot",
+    testPriceJitterEnabled: testPriceJitterEnabled,
+    testPriceJitterPercent: testPriceJitterPercent,
     version: extensionVersion
   };
 }
@@ -258,10 +262,16 @@ function resetPortfolioSnapshots() {
 async function initPortfolioDiff() {
   try {
     snapshotMinAgeMs = await getSnapshotMinAgeMs();
+    testPriceJitterEnabled = await getDebugPriceJitterEnabled();
+    testPriceJitterPercent = await getDebugPriceJitterPercent();
   } catch (error) {
-    logWarn(`Failed to load snapshot interval setting: ${error}`);
+    logWarn(`Failed to load extension settings: ${error}`);
     snapshotMinAgeMs = DEFAULT_SNAPSHOT_MIN_AGE_MS;
+    testPriceJitterEnabled = false;
+    testPriceJitterPercent = 5;
   }
+
+  applyTestPriceSimulationToPortfolio();
 
   const portfolioSummary = getCurrentPortfolioSummary();
   if (!portfolioSummary) {
@@ -321,6 +331,27 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 
   if (message.type === "popup:updateSnapshotInterval") {
     snapshotMinAgeMs = Number(message.intervalMs) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+    sendResponse({ ok: true });
+
+    setTimeout(function() {
+      window.location.reload();
+    }, 100);
+    return false;
+  }
+
+  if (message.type === "popup:updateTestPriceJitter") {
+    testPriceJitterEnabled = Boolean(message.enabled);
+    testPriceJitterPercent = Number(message.percent) || 5;
+    sendResponse({ ok: true });
+
+    setTimeout(function() {
+      window.location.reload();
+    }, 100);
+    return false;
+  }
+
+  if (message.type === "popup:updateTestPriceJitterPercent") {
+    testPriceJitterPercent = Number(message.percent) || 5;
     sendResponse({ ok: true });
 
     setTimeout(function() {

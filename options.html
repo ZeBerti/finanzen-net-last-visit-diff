@@ -98,6 +98,34 @@
         gap: 10px;
       }
 
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.65);
+      }
+
+      .toggle label {
+        font-size: 14px;
+        color: var(--text);
+      }
+
+      .toggle small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+      }
+
+      .toggle input {
+        width: 18px;
+        height: 18px;
+      }
+
       button {
         appearance: none;
         border: none;
@@ -181,6 +209,17 @@
         </div>
 
         <div class="status" id="status-message">Verbinde mit aktiver Depotseite...</div>
+
+        <div class="toggle">
+          <label for="test-price-jitter-toggle">
+            Testmodus ±X %
+            <small>Simuliert sichtbare Kursbewegungen abwechselnd als Plus/Minus und beeinflusst Tooltip, Header und Snapshots.</small>
+          </label>
+          <div>
+            <input id="test-price-jitter-percent-input" type="number" min="0" max="100" step="0.5" value="5" style="width:72px; margin-right:8px;">
+            <input id="test-price-jitter-toggle" type="checkbox">
+          </div>
+        </div>
 
         <div class="actions">
           <button class="button-primary" id="refresh-snapshots" type="button">Snapshot jetzt aktualisieren</button>

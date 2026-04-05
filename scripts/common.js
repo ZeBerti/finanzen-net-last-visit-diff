@@ -27,6 +27,8 @@ function getStorageEntryKey(entry) {
 const LOG_PREFIX = "[FinanzenDotNetDiff]";
 const DEFAULT_SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
 const SNAPSHOT_INTERVAL_SETTING_KEY = "snapshotMinAgeMs";
+const DEBUG_PRICE_JITTER_SETTING_KEY = "debugPriceJitterEnabled";
+const DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY = "debugPriceJitterPercent";
 
 function logDebug(message, ...args) {
   console.log(LOG_PREFIX, message, ...args);
@@ -263,6 +265,28 @@ async function getSnapshotMinAgeMs() {
   return Number(settings[SNAPSHOT_INTERVAL_SETTING_KEY]) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
 }
 
+async function getDebugPriceJitterEnabled() {
+  const settings = await readExtensionStorage({ [DEBUG_PRICE_JITTER_SETTING_KEY]: false });
+  return Boolean(settings[DEBUG_PRICE_JITTER_SETTING_KEY]);
+}
+
+async function getDebugPriceJitterPercent() {
+  const settings = await readExtensionStorage({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: 5 });
+  return Number(settings[DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]) || 5;
+}
+
+function getDeterministicTestPriceDirection(input) {
+  const text = String(input || "");
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return hash % 2 === 0 ? 1 : -1;
+}
+
 
 // Suche nach dem Element mit einem Text, der im Text des Elements enthalten ist und keine untergeordneten Elemente hat
 function findElementWithText(parentElement, domType, text) {
@@ -332,12 +356,15 @@ function findElementWithText(parentElement, domType, text) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     DEFAULT_SNAPSHOT_MIN_AGE_MS,
+    DEBUG_PRICE_JITTER_SETTING_KEY,
+    DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY,
     SNAPSHOT_INTERVAL_SETTING_KEY,
     calculateDiffValues,
     formatPercent,
     formatPercentagePoints,
     formatSnapshotAge,
     formatSnapshotIntervalLabel,
+    getDeterministicTestPriceDirection,
     hasSnapshotValuesChanged,
     shouldRefreshSnapshot
   };

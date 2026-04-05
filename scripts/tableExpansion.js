@@ -109,6 +109,199 @@ function createPendingDiffCell(sourceCell) {
     return diffCell;
 }
 
+function getPositionQuantity(positionRow, columnMap) {
+    const quantityText = positionRow.querySelectorAll("td")[columnMap.name]?.querySelector("strong")?.textContent;
+    return extractNumber(quantityText) || 0;
+}
+
+function applyTestPriceJitter(parsedRow) {
+    if (!testPriceJitterEnabled) {
+        return parsedRow;
+    }
+
+    const direction = getDeterministicTestPriceDirection(parsedRow.positionIdentity.storageKey);
+    const multiplier = 1 + ((testPriceJitterPercent / 100) * direction);
+    const adjustedCurrentValue = parsedRow.currentValue * multiplier;
+    const offset = adjustedCurrentValue - parsedRow.currentValue;
+    const adjustedAbsolutePerformance = parsedRow.absolutePerformance + offset;
+    const buyPrice = parsedRow.currentValue - parsedRow.absolutePerformance;
+    const adjustedPercentagePerformance = buyPrice !== 0
+        ? (adjustedAbsolutePerformance / buyPrice) * 100
+        : parsedRow.percentagePerformance;
+    const adjustedSinceBuyValue = parsedRow.sinceBuyValue + (offset * parsedRow.quantity);
+
+    return {
+        ...parsedRow,
+        currentValue: adjustedCurrentValue,
+        absolutePerformance: adjustedAbsolutePerformance,
+        percentagePerformance: adjustedPercentagePerformance,
+        sinceBuyValue: adjustedSinceBuyValue
+    };
+}
+
+function updatePositionRowDisplay(positionRow, columnMap, targetColumnIndex, effectiveRow) {
+    const cells = positionRow.querySelectorAll("td");
+    const currentValueCell = cells[columnMap.currentValue];
+    const currentValueStrongElements = currentValueCell?.querySelectorAll("strong") || [];
+    if (currentValueStrongElements.length >= 2) {
+        currentValueStrongElements[0].innerHTML = formatEuro(effectiveRow.currentValue);
+        currentValueStrongElements[1].innerHTML = formatEuro(effectiveRow.currentValue * effectiveRow.quantity);
+    }
+
+    const performanceCell = cells[targetColumnIndex];
+    const performanceSpans = performanceCell?.querySelectorAll("span") || [];
+    if (performanceSpans.length >= 3) {
+        performanceSpans[0].innerHTML = formatEuro(effectiveRow.absolutePerformance);
+        performanceSpans[1].innerHTML = formatPercent(effectiveRow.percentagePerformance);
+        performanceSpans[2].innerHTML = formatEuro(effectiveRow.sinceBuyValue);
+    }
+}
+
+function updatePortfolioSummaryDisplay(totalValueDelta) {
+    if (!testPriceJitterEnabled || totalValueDelta === 0) {
+        return;
+    }
+
+    const perfGesamtDiv = findDivWithText("Perf. gesamt");
+    if (!perfGesamtDiv?.parentNode) {
+        return;
+    }
+
+    const parentDiv = perfGesamtDiv.parentNode;
+    const performanceEuroElement = findElementWithText(parentDiv, "span", "EUR") || findElementWithText(parentDiv, "span", "€");
+    const performancePercentageElement = findElementWithText(parentDiv, "span", "%");
+    const gesamtwertLabel = findDivWithText("Gesamtwert");
+    const gesamtwertElement = gesamtwertLabel?.parentNode?.children?.[1];
+
+    if (!performanceEuroElement || !performancePercentageElement || !gesamtwertElement) {
+        return;
+    }
+
+    const currentTotalValue = extractNumber(gesamtwertElement.innerHTML);
+    const currentAbsolutePerformance = extractNumber(performanceEuroElement.innerHTML);
+    const buyPrice = currentTotalValue - currentAbsolutePerformance;
+    const adjustedTotalValue = currentTotalValue + totalValueDelta;
+    const adjustedAbsolutePerformance = currentAbsolutePerformance + totalValueDelta;
+    const adjustedPercentagePerformance = buyPrice !== 0
+        ? (adjustedAbsolutePerformance / buyPrice) * 100
+        : extractNumber(performancePercentageElement.innerHTML);
+
+    gesamtwertElement.innerHTML = formatEuro(adjustedTotalValue);
+    performanceEuroElement.innerHTML = formatEuro(adjustedAbsolutePerformance);
+    performancePercentageElement.innerHTML = formatPercent(adjustedPercentagePerformance);
+}
+
+function applyTestPriceSimulationToPortfolio() {
+    if (!testPriceJitterEnabled) {
+        return;
+    }
+
+    const tableState = getPortfolioTableState();
+    if (!tableState) {
+        return;
+    }
+
+    const productNameList = [];
+    let totalValueDelta = 0;
+
+    tableState.tbodyRows.forEach(function(positionRow) {
+        if (positionRow.querySelectorAll("td").length <= 2 || positionRow.getElementsByClassName("message--warning").length > 0) {
+            return;
+        }
+
+        const parsedRow = parsePositionRow(positionRow, tableState.columnMap, productNameList, tableState.targetColumnIndex);
+        if (!parsedRow) {
+            return;
+        }
+
+        const effectiveRow = applyTestPriceJitter(parsedRow);
+        totalValueDelta += (effectiveRow.currentValue - parsedRow.currentValue) * parsedRow.quantity;
+        updatePositionRowDisplay(positionRow, tableState.columnMap, tableState.targetColumnIndex, effectiveRow);
+    });
+
+    updatePortfolioSummaryDisplay(totalValueDelta);
+}
+
+function setRowDiffSortValue(positionRow, diffValue, isSortable) {
+    positionRow.dataset.lastDiffValue = isSortable ? String(diffValue) : "";
+    positionRow.dataset.lastDiffSortable = isSortable ? "true" : "false";
+}
+
+function sortRowsByLastDiff(tableState, direction) {
+    const tbody = tableState.table.querySelector("tbody");
+    if (!tbody) {
+        return;
+    }
+
+    const rows = Array.from(tableState.tbodyRows);
+    rows.sort(function(a, b) {
+        const aSortable = a.dataset.lastDiffSortable === "true";
+        const bSortable = b.dataset.lastDiffSortable === "true";
+
+        if (aSortable && !bSortable) {
+            return -1;
+        }
+
+        if (!aSortable && bSortable) {
+            return 1;
+        }
+
+        if (!aSortable && !bSortable) {
+            return 0;
+        }
+
+        const aValue = Number(a.dataset.lastDiffValue);
+        const bValue = Number(b.dataset.lastDiffValue);
+
+        return direction === "desc" ? bValue - aValue : aValue - bValue;
+    });
+
+    rows.forEach(function(row) {
+        tbody.appendChild(row);
+    });
+}
+
+function attachLastDiffSort(tableState, sortHeaderLink) {
+    if (!sortHeaderLink) {
+        return;
+    }
+
+    const clearNativeSortIndicators = function() {
+        tableState.headerRow.querySelectorAll(".icon--sort-up, .icon--sort-down").forEach(function(sortIcon) {
+            sortIcon.remove();
+        });
+    };
+
+    const updateHeaderLabel = function(direction) {
+        if (!direction) {
+            sortHeaderLink.textContent = "± zuletzt";
+            return;
+        }
+
+        sortHeaderLink.textContent = direction === "desc" ? "± zuletzt ▼" : "± zuletzt ▲";
+    };
+
+    sortHeaderLink.style.cursor = "pointer";
+    sortHeaderLink.setAttribute("href", "#");
+    sortHeaderLink.dataset.sortDirection = "";
+    updateHeaderLabel("");
+
+    sortHeaderLink.addEventListener("click", function(event) {
+        event.preventDefault();
+        const currentDirection = sortHeaderLink.dataset.sortDirection === "desc"
+            ? "desc"
+            : sortHeaderLink.dataset.sortDirection === "asc"
+                ? "asc"
+                : "";
+        const nextDirection = currentDirection === "desc" ? "asc" : "desc";
+
+        clearNativeSortIndicators();
+        sortRowsByLastDiff(tableState, nextDirection);
+        sortHeaderLink.dataset.sortDirection = nextDirection;
+        updateHeaderLabel(nextDirection);
+    });
+}
+
 function parsePositionRow(positionRow, columnMap, productNameList, targetColumnIndex) {
     const cells = positionRow.querySelectorAll("td");
     if (cells.length <= targetColumnIndex || cells.length <= columnMap.currentValue || cells.length <= columnMap.name) {
@@ -138,6 +331,7 @@ function parsePositionRow(positionRow, columnMap, productNameList, targetColumnI
         shareName: shareName,
         productIndex: productIndex,
         positionIdentity: positionIdentity,
+        quantity: getPositionQuantity(positionRow, columnMap),
         currentValue: currentValue,
         absolutePerformance: extractNumber(performanceSpans[0].innerHTML),
         percentagePerformance: extractNumber(performanceSpans[1].innerHTML),
@@ -254,6 +448,9 @@ function addNewColumnHeader(shouldPersistSnapshot) {
         let productNameList=[];
 
         var thNew = tableState.thGesamt.cloneNode(true);
+        thNew.querySelectorAll(".icon--sort-up, .icon--sort-down").forEach(function(sortIcon) {
+            sortIcon.remove();
+        });
         const headerLinks = thNew.querySelectorAll('th a');
         if (headerLinks.length < 3) {
             logWarn("Expected header links for duplicated column not found");
@@ -261,7 +458,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
         }
         headerLinks[0].innerHTML = "± zuletzt";
         headerLinks[0].title = "Wertentwicklung dieser Position in Euro seit letztem Abruf";
-        headerLinks[0].removeAttribute("href");
+        headerLinks[0].setAttribute("href", "#");
 
         headerLinks[1].innerHTML = "% zuletzt";
         headerLinks[1].title = "Wertentwicklung dieser Position in % seit letztem Abruf";
@@ -273,6 +470,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
 
         tableState.headerRow.insertBefore(thNew, tableState.thGesamt);
+        attachLastDiffSort(tableState, headerLinks[0]);
 
         const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
 
@@ -289,6 +487,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                         return;
                     }
 
+                    setRowDiffSortValue(positionRow, 0, false);
                     positionRow.insertBefore(createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell);
                     return;
                 }
@@ -315,6 +514,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
+                    setRowDiffSortValue(positionRow, 0, false);
                     positionRow.insertBefore(createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell);
                     return;
                 }
@@ -328,6 +528,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                 tdCopySpans[0].innerHTML = formatEuro(diffValues.currentValueDiff);
                 tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
                 tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
+                setRowDiffSortValue(positionRow, diffValues.currentValueDiff, true);
 
                 const tooltipLines = [
                     `Aktueller Kurs: ${formatEuro(getEntryCurrentValue(lastShareEntry))} - ${formatEuro(parsedRow.currentValue)} = ${formatEuro(diffValues.currentValueDiff)}`,
@@ -338,6 +539,10 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 if (positionIdentity.mode !== "stable") {
                     tooltipLines.push(`Matching: degradiert via ${positionIdentity.reason}`);
+                }
+
+                if (testPriceJitterEnabled) {
+                    tooltipLines.push(`Testmodus: simulierte Kursbewegung ±${testPriceJitterPercent} %`);
                 }
 
                 tdCopy.setAttribute("title", tooltipLines.join("\n"));

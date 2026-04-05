@@ -5,8 +5,12 @@ const entryCountElement = document.getElementById("entry-count");
 const refreshButton = document.getElementById("refresh-snapshots");
 const resetButton = document.getElementById("reset-snapshots");
 const versionLabelElement = document.getElementById("version-label");
+const testPriceJitterToggleElement = document.getElementById("test-price-jitter-toggle");
+const testPriceJitterPercentInputElement = document.getElementById("test-price-jitter-percent-input");
 const SNAPSHOT_INTERVAL_SETTING_KEY = "snapshotMinAgeMs";
 const DEFAULT_SNAPSHOT_MIN_AGE_MS = 2 * 60 * 60 * 1000;
+const DEBUG_PRICE_JITTER_SETTING_KEY = "debugPriceJitterEnabled";
+const DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY = "debugPriceJitterPercent";
 
 function formatSnapshotIntervalLabel(intervalMs) {
   const totalMinutes = intervalMs / (60 * 1000);
@@ -31,6 +35,8 @@ function setButtonsDisabled(isDisabled) {
   refreshButton.disabled = isDisabled;
   resetButton.disabled = isDisabled;
   snapshotIntervalSelectElement.disabled = isDisabled;
+  testPriceJitterToggleElement.disabled = isDisabled;
+  testPriceJitterPercentInputElement.disabled = isDisabled;
 }
 
 async function getActiveTab() {
@@ -56,12 +62,32 @@ async function saveSnapshotIntervalSetting(intervalMs) {
   await chrome.storage.local.set({ [SNAPSHOT_INTERVAL_SETTING_KEY]: intervalMs });
 }
 
+async function loadTestPriceJitterSetting() {
+  const settings = await chrome.storage.local.get({ [DEBUG_PRICE_JITTER_SETTING_KEY]: false });
+  return Boolean(settings[DEBUG_PRICE_JITTER_SETTING_KEY]);
+}
+
+async function saveTestPriceJitterSetting(isEnabled) {
+  await chrome.storage.local.set({ [DEBUG_PRICE_JITTER_SETTING_KEY]: Boolean(isEnabled) });
+}
+
+async function loadTestPriceJitterPercentSetting() {
+  const settings = await chrome.storage.local.get({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: 5 });
+  return Number(settings[DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]) || 5;
+}
+
+async function saveTestPriceJitterPercentSetting(percent) {
+  await chrome.storage.local.set({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: Number(percent) || 5 });
+}
+
 function renderStatus(status) {
   snapshotAgeElement.textContent = status.lastSnapshotAge || "kein Snapshot";
   entryCountElement.textContent = String(status.entryCount ?? 0);
   versionLabelElement.textContent = `Extension v${status.version || chrome.runtime.getManifest().version}`;
 
-  if (status.hasSnapshot) {
+  if (status.testPriceJitterEnabled) {
+    setStatus(`Testmodus aktiv. Sichtbare Kurse werden abwechselnd um ±${status.testPriceJitterPercent} % simuliert.`, false);
+  } else if (status.hasSnapshot) {
     setStatus("Snapshot-Status geladen. Aktionen gelten fuer das aktuell geoeffnete Depot.", false);
   } else {
     setStatus("Noch kein Snapshot vorhanden. Nach dem ersten Speichern stehen Vergleichswerte bereit.", false);
@@ -74,8 +100,12 @@ async function refreshStatus() {
 
   try {
     const intervalMs = await loadSnapshotIntervalSetting();
+    const testPriceJitterEnabled = await loadTestPriceJitterSetting();
+    const testPriceJitterPercent = await loadTestPriceJitterPercentSetting();
     snapshotIntervalSelectElement.value = String(intervalMs);
     snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
+    testPriceJitterToggleElement.checked = testPriceJitterEnabled;
+    testPriceJitterPercentInputElement.value = String(testPriceJitterPercent);
     const response = await sendMessageToActiveTab({ type: "popup:getSnapshotStatus" });
     if (!response?.ok || !response.status) {
       throw new Error("Keine gueltige Antwort von der Depotseite.");
@@ -85,8 +115,12 @@ async function refreshStatus() {
     setButtonsDisabled(false);
   } catch (error) {
     const intervalMs = await loadSnapshotIntervalSetting();
+    const testPriceJitterEnabled = await loadTestPriceJitterSetting();
+    const testPriceJitterPercent = await loadTestPriceJitterPercentSetting();
     snapshotIntervalSelectElement.value = String(intervalMs);
     snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
+    testPriceJitterToggleElement.checked = testPriceJitterEnabled;
+    testPriceJitterPercentInputElement.value = String(testPriceJitterPercent);
     snapshotAgeElement.textContent = "-";
     entryCountElement.textContent = "-";
     versionLabelElement.textContent = `Extension v${chrome.runtime.getManifest().version}`;
@@ -133,6 +167,57 @@ snapshotIntervalSelectElement.addEventListener("change", async function(event) {
     setButtonsDisabled(false);
   } catch (error) {
     setStatus("Snapshot-Intervall konnte nicht gespeichert werden.", true);
+    setButtonsDisabled(false);
+  }
+});
+
+testPriceJitterPercentInputElement.addEventListener("change", async function(event) {
+  const percent = Math.max(0, Number(event.target.value) || 5);
+  testPriceJitterPercentInputElement.value = String(percent);
+  setButtonsDisabled(true);
+  setStatus("Speichere Testmodus-Prozentsatz...", false);
+
+  try {
+    await saveTestPriceJitterPercentSetting(percent);
+
+    try {
+      await sendMessageToActiveTab({ type: "popup:updateTestPriceJitterPercent", percent: percent });
+      setStatus("Testmodus-Prozentsatz gespeichert. Die Depotseite wird neu geladen.", false);
+      window.close();
+      return;
+    } catch (error) {
+      setStatus("Testmodus-Prozentsatz gespeichert. Wirksam auf der naechsten Depotseite.", false);
+    }
+
+    setButtonsDisabled(false);
+  } catch (error) {
+    setStatus("Testmodus-Prozentsatz konnte nicht gespeichert werden.", true);
+    setButtonsDisabled(false);
+  }
+});
+
+testPriceJitterToggleElement.addEventListener("change", async function(event) {
+  const isEnabled = Boolean(event.target.checked);
+  setButtonsDisabled(true);
+  setStatus("Speichere Testmodus...", false);
+
+  try {
+    await saveTestPriceJitterSetting(isEnabled);
+    const percent = Math.max(0, Number(testPriceJitterPercentInputElement.value) || 5);
+    await saveTestPriceJitterPercentSetting(percent);
+
+    try {
+      await sendMessageToActiveTab({ type: "popup:updateTestPriceJitter", enabled: isEnabled, percent: percent });
+      setStatus("Testmodus gespeichert. Die Depotseite wird neu geladen.", false);
+      window.close();
+      return;
+    } catch (error) {
+      setStatus("Testmodus gespeichert. Wirksam auf der naechsten Depotseite.", false);
+    }
+
+    setButtonsDisabled(false);
+  } catch (error) {
+    setStatus("Testmodus konnte nicht gespeichert werden.", true);
     setButtonsDisabled(false);
   }
 });
