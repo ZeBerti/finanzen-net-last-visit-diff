@@ -1,7 +1,6 @@
 const statusMessageElement = document.getElementById("status-message");
 const snapshotIntervalSelectElement = document.getElementById("snapshot-interval-select");
 const snapshotTimestampElement = document.getElementById("snapshot-timestamp");
-const snapshotAgeElement = document.getElementById("snapshot-age");
 const entryCountElement = document.getElementById("entry-count");
 const refreshButton = document.getElementById("refresh-snapshots");
 const resetButton = document.getElementById("reset-snapshots");
@@ -103,7 +102,6 @@ async function saveTestPriceJitterPercentSetting(percent) {
 
 function renderStatus(status) {
   snapshotTimestampElement.textContent = formatSnapshotTimestamp(status.lastSnapshotTimestamp);
-  snapshotAgeElement.textContent = status.lastSnapshotAge || "kein Snapshot";
   entryCountElement.textContent = String(status.entryCount ?? 0);
   versionLabelElement.textContent = `Extension v${status.version || chrome.runtime.getManifest().version}`;
 
@@ -144,7 +142,6 @@ async function refreshStatus() {
     testPriceJitterToggleElement.checked = testPriceJitterEnabled;
     testPriceJitterPercentInputElement.value = String(testPriceJitterPercent);
     snapshotTimestampElement.textContent = "-";
-    snapshotAgeElement.textContent = "-";
     entryCountElement.textContent = "-";
     versionLabelElement.textContent = `Extension v${chrome.runtime.getManifest().version}`;
     setStatus("Die aktive Seite ist keine geladene finanzen.net-Depotseite oder die Extension wurde dort noch nicht injiziert.", true);

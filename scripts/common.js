@@ -125,27 +125,24 @@ function hasSnapshotValuesChanged(previousEntry, currentValues) {
   );
 }
 
-function formatSnapshotAge(entry) {
-  const lastTimestampMs = getEntryTimestampMs(entry);
-  if (lastTimestampMs === null) {
-    return "unbekannt";
+function formatSnapshotTimestamp(timestamp) {
+  if (!timestamp) {
+    return "kein Snapshot";
   }
 
-  const ageMs = Math.max(0, Date.now() - lastTimestampMs);
-  const totalMinutes = Math.floor(ageMs / (60 * 1000));
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-
-  if (days > 0) {
-    return `vor ${days}d ${hours}h`;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "ungueltig";
   }
 
-  if (hours > 0) {
-    return `vor ${hours}h ${minutes}m`;
-  }
-
-  return `vor ${minutes}m`;
+  return date.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
 }
 
 function calculateDiffValues(previousEntry, currentValues) {
@@ -362,7 +359,7 @@ if (typeof module !== "undefined" && module.exports) {
     calculateDiffValues,
     formatPercent,
     formatPercentagePoints,
-    formatSnapshotAge,
+    formatSnapshotTimestamp,
     formatSnapshotIntervalLabel,
     getDeterministicTestPriceDirection,
     hasSnapshotValuesChanged,

@@ -248,7 +248,6 @@ function getPopupSnapshotStatus() {
     snapshotIntervalLabel: formatSnapshotIntervalLabel(snapshotMinAgeMs),
     hasSnapshot: Boolean(portfolioEntry),
     lastSnapshotTimestamp: portfolioEntry?.timestamp ?? null,
-    lastSnapshotAge: portfolioEntry ? formatSnapshotAge(portfolioEntry) : "kein Snapshot",
     testPriceJitterEnabled: testPriceJitterEnabled,
     testPriceJitterPercent: testPriceJitterPercent,
     version: extensionVersion

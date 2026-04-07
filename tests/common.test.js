@@ -6,7 +6,7 @@ const {
   calculateDiffValues,
   formatPercent,
   formatPercentagePoints,
-  formatSnapshotAge,
+  formatSnapshotTimestamp,
   formatSnapshotIntervalLabel,
   hasSnapshotValuesChanged,
   shouldRefreshSnapshot
@@ -69,10 +69,6 @@ test("format helpers use German display conventions", () => {
   assert.equal(formatSnapshotIntervalLabel(DEFAULT_SNAPSHOT_MIN_AGE_MS), "2 Stunden");
 });
 
-test("formatSnapshotAge returns minutes for recent snapshots", () => {
-  const entry = {
-    timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-  };
-
-  assert.match(formatSnapshotAge(entry), /^vor 10m$/);
+test("formatSnapshotTimestamp returns a readable timestamp", () => {
+  assert.equal(formatSnapshotTimestamp("2026-04-07T12:34:56.000Z").includes("2026"), true);
 });

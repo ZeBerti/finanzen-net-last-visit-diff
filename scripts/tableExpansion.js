@@ -551,7 +551,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                     `Aktueller Kurs: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
                     `Performance: ${formatPercent(parsedRow.percentagePerformance)} - ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
                     `Wertentwicklung gesamt: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
-                    `Snapshot-Alter: ${formatSnapshotAge(lastShareEntry)}`
+                    `Snapshot: ${formatSnapshotTimestamp(lastShareEntry?.timestamp)}`
                 ];
 
                 if (positionIdentity.mode !== "stable") {
