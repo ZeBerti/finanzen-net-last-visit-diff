@@ -1,5 +1,6 @@
 const statusMessageElement = document.getElementById("status-message");
 const snapshotIntervalSelectElement = document.getElementById("snapshot-interval-select");
+const snapshotTimestampElement = document.getElementById("snapshot-timestamp");
 const snapshotAgeElement = document.getElementById("snapshot-age");
 const entryCountElement = document.getElementById("entry-count");
 const refreshButton = document.getElementById("refresh-snapshots");
@@ -24,6 +25,26 @@ function formatSnapshotIntervalLabel(intervalMs) {
   }
 
   return `${totalHours} Stunden`;
+}
+
+function formatSnapshotTimestamp(timestamp) {
+  if (!timestamp) {
+    return "kein Snapshot";
+  }
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "ungueltig";
+  }
+
+  return date.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
 }
 
 function setStatus(message, isError) {
@@ -81,6 +102,7 @@ async function saveTestPriceJitterPercentSetting(percent) {
 }
 
 function renderStatus(status) {
+  snapshotTimestampElement.textContent = formatSnapshotTimestamp(status.lastSnapshotTimestamp);
   snapshotAgeElement.textContent = status.lastSnapshotAge || "kein Snapshot";
   entryCountElement.textContent = String(status.entryCount ?? 0);
   versionLabelElement.textContent = `Extension v${status.version || chrome.runtime.getManifest().version}`;
@@ -121,6 +143,7 @@ async function refreshStatus() {
     snapshotIntervalSelectElement.title = `Aktuell: ${formatSnapshotIntervalLabel(intervalMs)}`;
     testPriceJitterToggleElement.checked = testPriceJitterEnabled;
     testPriceJitterPercentInputElement.value = String(testPriceJitterPercent);
+    snapshotTimestampElement.textContent = "-";
     snapshotAgeElement.textContent = "-";
     entryCountElement.textContent = "-";
     versionLabelElement.textContent = `Extension v${chrome.runtime.getManifest().version}`;
