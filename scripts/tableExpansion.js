@@ -90,6 +90,7 @@ function createUnavailableDiffCell(sourceCell) {
     }
 
     diffCell.setAttribute("title", "Keine Kursdaten verfuegbar");
+    diffCell.classList.add("fndd-plugin-column");
     return diffCell;
 }
 
@@ -106,7 +107,37 @@ function createPendingDiffCell(sourceCell) {
     }
 
     diffCell.setAttribute("title", "Noch kein vorheriger Snapshot vorhanden");
+    diffCell.classList.add("fndd-plugin-column");
     return diffCell;
+}
+
+function ensurePluginColumnStyles() {
+    if (document.getElementById("fndd-plugin-column-styles")) {
+        return;
+    }
+
+    const styleElement = document.createElement("style");
+    styleElement.id = "fndd-plugin-column-styles";
+    styleElement.textContent = `
+        .fndd-plugin-column {
+            background: rgba(113, 169, 253, 0.06);
+            border-left: 1px solid rgba(113, 169, 253, 0.18);
+            border-right: 1px solid rgba(113, 169, 253, 0.18);
+        }
+
+        .fndd-plugin-column-header {
+            background: rgba(113, 169, 253, 0.10);
+            border-left: 1px solid rgba(113, 169, 253, 0.18);
+            border-right: 1px solid rgba(113, 169, 253, 0.18);
+            box-shadow: inset 0 -2px 0 rgba(113, 169, 253, 0.35);
+        }
+
+        .fndd-plugin-column-header a {
+            font-weight: 600;
+        }
+    `;
+
+    document.head.appendChild(styleElement);
 }
 
 function updateDiffSpanColor(spanElement, value) {
@@ -457,11 +488,14 @@ function addNewColumnHeader(shouldPersistSnapshot) {
         return;
     }
 
+    ensurePluginColumnStyles();
+
     // If the target column with "± gesamt" is found, add a new column
     if (tableState.targetColumnIndex !== -1 && tableState.thGesamt && tableState.columnMap.name !== -1 && tableState.columnMap.currentValue !== -1) {
         let productNameList=[];
 
         var thNew = tableState.thGesamt.cloneNode(true);
+        thNew.classList.add("fndd-plugin-column", "fndd-plugin-column-header");
         thNew.querySelectorAll(".icon--sort-up, .icon--sort-down").forEach(function(sortIcon) {
             sortIcon.remove();
         });
@@ -525,6 +559,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                 saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot);
 
                 let tdCopy = parsedRow.performanceCell.cloneNode(true);
+                tdCopy.classList.add("fndd-plugin-column");
 
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
