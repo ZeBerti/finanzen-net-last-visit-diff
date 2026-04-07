@@ -109,6 +109,20 @@ function createPendingDiffCell(sourceCell) {
     return diffCell;
 }
 
+function updateDiffSpanColor(spanElement, value) {
+    if (!spanElement) {
+        return;
+    }
+
+    spanElement.classList.remove("font-color-green", "font-color-red");
+
+    if (value > 0) {
+        spanElement.classList.add("font-color-green");
+    } else if (value < 0) {
+        spanElement.classList.add("font-color-red");
+    }
+}
+
 function getPositionQuantity(positionRow, columnMap) {
     const quantityText = positionRow.querySelectorAll("td")[columnMap.name]?.querySelector("strong")?.textContent;
     return extractNumber(quantityText) || 0;
@@ -528,12 +542,15 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                 tdCopySpans[0].innerHTML = formatEuro(diffValues.currentValueDiff);
                 tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
                 tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
+                updateDiffSpanColor(tdCopySpans[0], diffValues.currentValueDiff);
+                updateDiffSpanColor(tdCopySpans[1], diffValues.percentageDiff);
+                updateDiffSpanColor(tdCopySpans[2], diffValues.sinceBuyDiff);
                 setRowDiffSortValue(positionRow, diffValues.currentValueDiff, true);
 
                 const tooltipLines = [
-                    `Aktueller Kurs: ${formatEuro(getEntryCurrentValue(lastShareEntry))} - ${formatEuro(parsedRow.currentValue)} = ${formatEuro(diffValues.currentValueDiff)}`,
-                    `Performance: ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} - ${formatPercent(parsedRow.percentagePerformance)} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
-                    `Wertentwicklung gesamt: ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} - ${formatEuro(parsedRow.sinceBuyValue)} = ${formatEuro(diffValues.sinceBuyDiff)}`,
+                    `Aktueller Kurs: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
+                    `Performance: ${formatPercent(parsedRow.percentagePerformance)} - ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
+                    `Wertentwicklung gesamt: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
                     `Snapshot-Alter: ${formatSnapshotAge(lastShareEntry)}`
                 ];
 
