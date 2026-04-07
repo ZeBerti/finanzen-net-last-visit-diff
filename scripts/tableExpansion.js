@@ -271,6 +271,7 @@ function setRowDiffSortValues(positionRow, diffValues, isSortable) {
     positionRow.dataset.lastDiffSortable = isSortable ? "true" : "false";
     positionRow.dataset.lastDiffEuroValue = isSortable ? String(diffValues.currentValueDiff) : "";
     positionRow.dataset.lastDiffPercentValue = isSortable ? String(diffValues.percentageDiff) : "";
+    positionRow.dataset.lastDiffSumValue = isSortable ? String(diffValues.sinceBuyDiff) : "";
 }
 
 function sortRowsByLastDiff(tableState, direction, valueKey) {
@@ -530,9 +531,9 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
         headerLinks[2].innerHTML = "∑ zuletzt";
         headerLinks[2].title = "Gesamte Wertentwicklung aller Positionen in Euro seit letztem Abruf";
-        headerLinks[2].removeAttribute("href");
+        headerLinks[2].setAttribute("href", "#");
         tableState.headerRow.insertBefore(thNew, tableState.thGesamt);
-        tableState.sortLinks = [headerLinks[0], headerLinks[1]];
+        tableState.sortLinks = [headerLinks[0], headerLinks[1], headerLinks[2]];
         attachCustomSort(tableState, headerLinks[0], {
             label: "± zuletzt",
             valueKey: "lastDiffEuroValue"
@@ -540,6 +541,10 @@ function addNewColumnHeader(shouldPersistSnapshot) {
         attachCustomSort(tableState, headerLinks[1], {
             label: "% zuletzt",
             valueKey: "lastDiffPercentValue"
+        });
+        attachCustomSort(tableState, headerLinks[2], {
+            label: "∑ zuletzt",
+            valueKey: "lastDiffSumValue"
         });
 
         const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
@@ -559,7 +564,8 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                     setRowDiffSortValues(positionRow, {
                         currentValueDiff: 0,
-                        percentageDiff: 0
+                        percentageDiff: 0,
+                        sinceBuyDiff: 0
                     }, false);
                     positionRow.insertBefore(createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell);
                     return;
@@ -590,7 +596,8 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
                     setRowDiffSortValues(positionRow, {
                         currentValueDiff: 0,
-                        percentageDiff: 0
+                        percentageDiff: 0,
+                        sinceBuyDiff: 0
                     }, false);
                     positionRow.insertBefore(createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell);
                     return;
