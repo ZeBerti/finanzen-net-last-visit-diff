@@ -267,12 +267,13 @@ function applyTestPriceSimulationToPortfolio() {
     updatePortfolioSummaryDisplay(totalValueDelta);
 }
 
-function setRowDiffSortValue(positionRow, diffValue, isSortable) {
-    positionRow.dataset.lastDiffValue = isSortable ? String(diffValue) : "";
+function setRowDiffSortValues(positionRow, diffValues, isSortable) {
     positionRow.dataset.lastDiffSortable = isSortable ? "true" : "false";
+    positionRow.dataset.lastDiffEuroValue = isSortable ? String(diffValues.currentValueDiff) : "";
+    positionRow.dataset.lastDiffPercentValue = isSortable ? String(diffValues.percentageDiff) : "";
 }
 
-function sortRowsByLastDiff(tableState, direction) {
+function sortRowsByLastDiff(tableState, direction, valueKey) {
     const tbody = tableState.table.querySelector("tbody");
     if (!tbody) {
         return;
@@ -295,8 +296,8 @@ function sortRowsByLastDiff(tableState, direction) {
             return 0;
         }
 
-        const aValue = Number(a.dataset.lastDiffValue);
-        const bValue = Number(b.dataset.lastDiffValue);
+        const aValue = Number(a.dataset[valueKey]);
+        const bValue = Number(b.dataset[valueKey]);
 
         return direction === "desc" ? bValue - aValue : aValue - bValue;
     });
@@ -306,29 +307,43 @@ function sortRowsByLastDiff(tableState, direction) {
     });
 }
 
-function attachLastDiffSort(tableState, sortHeaderLink) {
+function clearCustomSortIndicators(tableState) {
+    if (!tableState.sortLinks) {
+        return;
+    }
+
+    tableState.sortLinks.forEach(function(sortLink) {
+        sortLink.dataset.sortDirection = "";
+        sortLink.textContent = sortLink.dataset.sortLabel;
+    });
+}
+
+function clearNativeSortIndicators(tableState) {
+    tableState.headerRow.querySelectorAll(".icon--sort-up, .icon--sort-down").forEach(function(sortIcon) {
+        sortIcon.remove();
+    });
+}
+
+function attachCustomSort(tableState, sortHeaderLink, config) {
     if (!sortHeaderLink) {
         return;
     }
 
-    const clearNativeSortIndicators = function() {
-        tableState.headerRow.querySelectorAll(".icon--sort-up, .icon--sort-down").forEach(function(sortIcon) {
-            sortIcon.remove();
-        });
-    };
-
     const updateHeaderLabel = function(direction) {
         if (!direction) {
-            sortHeaderLink.textContent = "± zuletzt";
+            sortHeaderLink.textContent = config.label;
             return;
         }
 
-        sortHeaderLink.textContent = direction === "desc" ? "± zuletzt ▼" : "± zuletzt ▲";
+        sortHeaderLink.textContent = direction === "desc"
+            ? `${config.label} ▼`
+            : `${config.label} ▲`;
     };
 
     sortHeaderLink.style.cursor = "pointer";
     sortHeaderLink.setAttribute("href", "#");
     sortHeaderLink.dataset.sortDirection = "";
+    sortHeaderLink.dataset.sortLabel = config.label;
     updateHeaderLabel("");
 
     sortHeaderLink.addEventListener("click", function(event) {
@@ -340,8 +355,9 @@ function attachLastDiffSort(tableState, sortHeaderLink) {
                 : "";
         const nextDirection = currentDirection === "desc" ? "asc" : "desc";
 
-        clearNativeSortIndicators();
-        sortRowsByLastDiff(tableState, nextDirection);
+        clearCustomSortIndicators(tableState);
+        clearNativeSortIndicators(tableState);
+        sortRowsByLastDiff(tableState, nextDirection, config.valueKey);
         sortHeaderLink.dataset.sortDirection = nextDirection;
         updateHeaderLabel(nextDirection);
     });
@@ -510,15 +526,21 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
         headerLinks[1].innerHTML = "% zuletzt";
         headerLinks[1].title = "Wertentwicklung dieser Position in % seit letztem Abruf";
-        headerLinks[1].removeAttribute("href");
+        headerLinks[1].setAttribute("href", "#");
 
-        headerLinks[2].innerHTML = "W.-entw. seit letz. Bes.";
+        headerLinks[2].innerHTML = "∑ zuletzt";
         headerLinks[2].title = "Gesamte Wertentwicklung aller Positionen in Euro seit letztem Abruf";
         headerLinks[2].removeAttribute("href");
-
-
         tableState.headerRow.insertBefore(thNew, tableState.thGesamt);
-        attachLastDiffSort(tableState, headerLinks[0]);
+        tableState.sortLinks = [headerLinks[0], headerLinks[1]];
+        attachCustomSort(tableState, headerLinks[0], {
+            label: "± zuletzt",
+            valueKey: "lastDiffEuroValue"
+        });
+        attachCustomSort(tableState, headerLinks[1], {
+            label: "% zuletzt",
+            valueKey: "lastDiffPercentValue"
+        });
 
         const sharesZuletzt = createMap(loadFromDatabase(DATABASE_KEY));
 
@@ -535,7 +557,10 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                         return;
                     }
 
-                    setRowDiffSortValue(positionRow, 0, false);
+                    setRowDiffSortValues(positionRow, {
+                        currentValueDiff: 0,
+                        percentageDiff: 0
+                    }, false);
                     positionRow.insertBefore(createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell);
                     return;
                 }
@@ -563,7 +588,10 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
-                    setRowDiffSortValue(positionRow, 0, false);
+                    setRowDiffSortValues(positionRow, {
+                        currentValueDiff: 0,
+                        percentageDiff: 0
+                    }, false);
                     positionRow.insertBefore(createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell);
                     return;
                 }
@@ -580,12 +608,12 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                 updateDiffSpanColor(tdCopySpans[0], diffValues.currentValueDiff);
                 updateDiffSpanColor(tdCopySpans[1], diffValues.percentageDiff);
                 updateDiffSpanColor(tdCopySpans[2], diffValues.sinceBuyDiff);
-                setRowDiffSortValue(positionRow, diffValues.currentValueDiff, true);
+                setRowDiffSortValues(positionRow, diffValues, true);
 
                 const tooltipLines = [
-                    `Aktueller Kurs: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
-                    `Performance: ${formatPercent(parsedRow.percentagePerformance)} - ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
-                    `Wertentwicklung gesamt: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
+                    `Kursdifferenz: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
+                    `Prozentdifferenz: ${formatPercent(parsedRow.percentagePerformance)} - ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
+                    `Gesamtdifferenz: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
                     `Snapshot: ${formatSnapshotTimestamp(lastShareEntry?.timestamp)}`
                 ];
 
