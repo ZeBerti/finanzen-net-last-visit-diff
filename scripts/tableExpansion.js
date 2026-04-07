@@ -135,6 +135,7 @@ function ensurePluginColumnStyles() {
         .fndd-plugin-column-header a {
             font-weight: 600;
         }
+
     `;
 
     document.head.appendChild(styleElement);
