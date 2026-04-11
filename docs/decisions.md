@@ -122,6 +122,19 @@
   - Der Sortierzustand ist rein klientenseitig und nach Reload neu aufzubauen.
   - Sonderzeilen ohne Daten muessen beim Sortieren bewusst nach unten behandelt werden.
 
+## DEC-009: `% zuletzt` beschreibt relative Kursaenderung seit dem Snapshot
+- Datum: 2026-04-11
+- Status: accepted
+- Kontext:
+  - Die fruehere Berechnung von `% zuletzt` als Differenz zweier Performance-Prozentwerte seit Kauf war mathematisch moeglich, aber fuer Nutzer wenig intuitiv.
+  - Erwartet wird vielmehr die prozentuale Veraenderung des aktuellen Kurses bzw. Gesamtwerts relativ zum letzten gespeicherten Snapshot.
+- Entscheidung:
+  - `% zuletzt` wird kuenftig als relative Aenderung `((aktuell - Snapshot) / Snapshot) * 100` berechnet.
+  - Die Persistenz des Felds `percentagePerformance` wird dafuer nicht mehr benoetigt.
+- Konsequenzen:
+  - `% zuletzt` ist direkt an `± zuletzt` gekoppelt und leichter verstaendlich.
+  - Die Persistenz kann weiter verschlankt werden.
+
 ## Offene Entscheidungen
 - Soll `localStorage` spaeter durch `chrome.storage` ersetzt werden?
 - Wie stark soll die UI spaeter fuer eine moegliche Veroeffentlichung ueberarbeitet werden?

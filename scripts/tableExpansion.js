@@ -455,7 +455,6 @@ function saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot)
     if ((shouldPersistSnapshot || shouldSaveMissingSnapshot) && hasSnapshotValuesChanged(lastShareEntry, {
         currentValue: parsedRow.currentValue,
         absolutePerformance: parsedRow.absolutePerformance,
-        percentagePerformance: parsedRow.percentagePerformance,
         sinceBuyValue: parsedRow.sinceBuyValue
     })) {
         saveToDatabase(
@@ -463,7 +462,6 @@ function saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot)
             parsedRow.shareName,
             parsedRow.currentValue,
             parsedRow.absolutePerformance,
-            parsedRow.percentagePerformance,
             parsedRow.sinceBuyValue,
             positionStorageKey
         );
@@ -584,7 +582,6 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                 const diffValues = calculateDiffValues(lastShareEntry, {
                     currentValue: parsedRow.currentValue,
                     absolutePerformance: parsedRow.absolutePerformance,
-                    percentagePerformance: parsedRow.percentagePerformance,
                     sinceBuyValue: parsedRow.sinceBuyValue
                 });
 
@@ -620,7 +617,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 const tooltipLines = [
                     `Kursdifferenz: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
-                    `Prozentdifferenz: ${formatPercent(parsedRow.percentagePerformance)} - ${formatPercent(getEntryPercentagePerformance(lastShareEntry))} = ${formatPercentagePoints(diffValues.percentageDiff)}`,
+                    `Prozentdifferenz: (${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))}) / ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatPercent(diffValues.percentageDiff)}`,
                     `Gesamtdifferenz: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
                     `Snapshot: ${formatSnapshotTimestamp(lastShareEntry?.timestamp)}`
                 ];

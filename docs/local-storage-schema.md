@@ -23,7 +23,6 @@
   "currentValue": 123.45,
   "timestamp": "2026-03-15T21:00:00.000Z",
   "absolutePerformance": 456.78,
-  "percentagePerformance": 3.21,
   "sinceBuyValue": 89.01
 }
 ```
@@ -43,8 +42,6 @@
 - `absolutePerformance`
   - Absoluter Performance-Wert der Position bzw. des Gesamtdepots zum letzten Abruf.
   - Wird aktuell vor allem fuer den Header des Gesamtdepots benoetigt.
-- `percentagePerformance`
-  - Prozentuale Performance der Position bzw. des Gesamtdepots zum letzten Abruf.
 - `sinceBuyValue`
   - Absolute Wertentwicklung seit Kauf fuer die Position.
   - Beim Eintrag `Gesamt` wird aktuell `0` gespeichert.
@@ -55,7 +52,7 @@
 ## Bekannte Schwaechen
 - Fallbacks ueber `isin + Index` oder `name + Index` sind weniger robust als `pkdepdatennr`.
 - Das Schema enthaelt noch Metadaten (`name`), die fachlich nicht zwingend fuer die Berechnung noetig sind.
-- `absolutePerformance` ist derzeit nur teilweise fachlich begruendet und sollte bei einer spaeteren Schema-Bereinigung gezielt neu bewertet werden.
+- `absolutePerformance` ist derzeit vor allem wegen des Headers des Gesamtdepots noch im Schema.
 
 ## Hinweis zu Alt-Daten
 - Aeltere `localStorage`-Eintraege im frueheren Format werden nicht mehr ausgewertet.
@@ -63,6 +60,7 @@
 
 ## Snapshot-Policy
 - Diffs werden immer gegen den zuletzt gespeicherten Snapshot berechnet.
+- `% zuletzt` wird relativ zum gespeicherten Kurs bzw. Gesamtwert berechnet, nicht mehr als Differenz zweier Performance-Prozentwerte seit Kauf.
 - Ein neuer Snapshot wird nur geschrieben, wenn:
   - noch kein Eintrag existiert, oder
   - das konfigurierte Intervall abgelaufen ist und sich Werte geaendert haben.

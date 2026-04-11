@@ -5,7 +5,6 @@ const {
   DEFAULT_SNAPSHOT_MIN_AGE_MS,
   calculateDiffValues,
   formatPercent,
-  formatPercentagePoints,
   formatSnapshotTimestamp,
   formatSnapshotIntervalLabel,
   hasSnapshotValuesChanged,
@@ -32,7 +31,6 @@ test("hasSnapshotValuesChanged detects identical values", () => {
   const entry = {
     currentValue: 100,
     absolutePerformance: 10,
-    percentagePerformance: 5,
     sinceBuyValue: 10
   };
 
@@ -44,13 +42,11 @@ test("calculateDiffValues uses forward direction", () => {
     {
       currentValue: 100,
       absolutePerformance: 10,
-      percentagePerformance: 5,
       sinceBuyValue: 10
     },
     {
       currentValue: 110,
       absolutePerformance: 20,
-      percentagePerformance: 8,
       sinceBuyValue: 20
     }
   );
@@ -58,14 +54,13 @@ test("calculateDiffValues uses forward direction", () => {
   assert.deepEqual(diff, {
     currentValueDiff: 10,
     absolutePerformanceDiff: 10,
-    percentageDiff: 3,
+    percentageDiff: 10,
     sinceBuyDiff: 10
   });
 });
 
 test("format helpers use German display conventions", () => {
   assert.equal(formatPercent(1.5), "1,50 %");
-  assert.equal(formatPercentagePoints(1.5), "1,50 %-Pkt.");
   assert.equal(formatSnapshotIntervalLabel(DEFAULT_SNAPSHOT_MIN_AGE_MS), "2 Stunden");
 });
 

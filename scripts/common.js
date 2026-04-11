@@ -56,7 +56,6 @@ function normalizeStorageEntry(entry) {
     name: entry.name || "Unbekannt",
     currentValue: extractNumber(entry.currentValue),
     absolutePerformance: extractNumber(entry.absolutePerformance),
-    percentagePerformance: extractNumber(entry.percentagePerformance),
     sinceBuyValue: extractNumber(entry.sinceBuyValue),
     timestamp: entry.timestamp || null
   };
@@ -76,10 +75,6 @@ function normalizeStorageEntries(entries) {
 
 function getEntryAbsolutePerformance(entry) {
   return extractNumber(entry?.absolutePerformance);
-}
-
-function getEntryPercentagePerformance(entry) {
-  return extractNumber(entry?.percentagePerformance);
 }
 
 function getEntryCurrentValue(entry) {
@@ -120,7 +115,6 @@ function hasSnapshotValuesChanged(previousEntry, currentValues) {
   return (
     getEntryCurrentValue(previousEntry) !== extractNumber(currentValues?.currentValue) ||
     getEntryAbsolutePerformance(previousEntry) !== extractNumber(currentValues?.absolutePerformance) ||
-    getEntryPercentagePerformance(previousEntry) !== extractNumber(currentValues?.percentagePerformance) ||
     getEntryValueSinceBuy(previousEntry) !== extractNumber(currentValues?.sinceBuyValue)
   );
 }
@@ -150,10 +144,16 @@ function calculateDiffValues(previousEntry, currentValues) {
     return null;
   }
 
+  const previousCurrentValue = getEntryCurrentValue(previousEntry);
+  const currentCurrentValue = extractNumber(currentValues?.currentValue);
+  const percentageDiff = previousCurrentValue !== 0
+    ? ((currentCurrentValue - previousCurrentValue) / previousCurrentValue) * 100
+    : 0;
+
   return {
-    currentValueDiff: extractNumber(currentValues?.currentValue) - getEntryCurrentValue(previousEntry),
+    currentValueDiff: currentCurrentValue - previousCurrentValue,
     absolutePerformanceDiff: extractNumber(currentValues?.absolutePerformance) - getEntryAbsolutePerformance(previousEntry),
-    percentageDiff: extractNumber(currentValues?.percentagePerformance) - getEntryPercentagePerformance(previousEntry),
+    percentageDiff: percentageDiff,
     sinceBuyDiff: extractNumber(currentValues?.sinceBuyValue) - getEntryValueSinceBuy(previousEntry)
   };
 }
@@ -304,7 +304,7 @@ function findElementWithText(parentElement, domType, text) {
  databaseKey: name of the browser interna database
  productName: produkt name, e.g. alphabet
 **/
- function saveToDatabase(databaseKey, productName, currentValue, absolutePerformance, percentagePerformance, sinceBuyValue, entryKey) {
+ function saveToDatabase(databaseKey, productName, currentValue, absolutePerformance, sinceBuyValue, entryKey) {
 
   //const name = document.getElementById('name').value;
   const timestamp = getCurrentTimestamp();
@@ -326,7 +326,6 @@ function findElementWithText(parentElement, domType, text) {
     database[existingEntryIndex].name = productName;
     database[existingEntryIndex].currentValue = extractNumber(currentValue);
     database[existingEntryIndex].absolutePerformance = extractNumber(absolutePerformance);
-    database[existingEntryIndex].percentagePerformance = extractNumber(percentagePerformance);
     database[existingEntryIndex].timestamp = timestamp;
     database[existingEntryIndex].sinceBuyValue = extractNumber(sinceBuyValue);
     logDebug(`Entry '${productName}' updated in database.`);
@@ -338,7 +337,6 @@ function findElementWithText(parentElement, domType, text) {
       currentValue: extractNumber(currentValue),
       timestamp: timestamp,
       absolutePerformance: extractNumber(absolutePerformance),
-      percentagePerformance: extractNumber(percentagePerformance),
       sinceBuyValue: extractNumber(sinceBuyValue)
     };
     database.push(entry);
@@ -358,7 +356,6 @@ if (typeof module !== "undefined" && module.exports) {
     SNAPSHOT_INTERVAL_SETTING_KEY,
     calculateDiffValues,
     formatPercent,
-    formatPercentagePoints,
     formatSnapshotTimestamp,
     formatSnapshotIntervalLabel,
     getDeterministicTestPriceDirection,

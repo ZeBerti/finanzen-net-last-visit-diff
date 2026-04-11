@@ -226,12 +226,11 @@ function refreshPortfolioSnapshot(forceRefreshSnapshot) {
   const portfolioValues = {
     currentValue: portfolioSummary.gesamtwert,
     absolutePerformance: portfolioSummary.performanceEuro,
-    percentagePerformance: portfolioSummary.performancePercentage,
     sinceBuyValue: 0
   };
 
   if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, portfolioValues)) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, portfolioSummary.performancePercentage, 0, "portfolio:gesamt");
+    saveToDatabase(DATABASE_KEY, "Gesamt", portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, 0, "portfolio:gesamt");
     return { refreshed: true, timestamp: getCurrentTimestamp() };
   }
 
@@ -278,7 +277,6 @@ async function initPortfolioDiff() {
   }
 
   const performanceEuro = portfolioSummary.performanceEuro;
-  const performancePercentage = portfolioSummary.performancePercentage;
   const gesamtwert = portfolioSummary.gesamtwert;
 
   const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
@@ -289,7 +287,6 @@ async function initPortfolioDiff() {
     const diffValues = calculateDiffValues(lastEntry, {
       currentValue: gesamtwert,
       absolutePerformance: performanceEuro,
-      percentagePerformance: performancePercentage,
       sinceBuyValue: 0
     });
 
@@ -302,10 +299,9 @@ async function initPortfolioDiff() {
   if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, {
     currentValue: gesamtwert,
     absolutePerformance: performanceEuro,
-    percentagePerformance: performancePercentage,
     sinceBuyValue: 0
   })) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", gesamtwert, performanceEuro, performancePercentage, 0, "portfolio:gesamt");
+    saveToDatabase(DATABASE_KEY, "Gesamt", gesamtwert, performanceEuro, 0, "portfolio:gesamt");
   }
 
   const headerTable = portfolioSummary.parentDiv.parentNode;
