@@ -77,7 +77,7 @@ function buildColumnMap(headerCells) {
     return columnMap;
 }
 
-function createUnavailableDiffCell(sourceCell) {
+function createPlaceholderDiffCell(sourceCell, title) {
     const diffCell = sourceCell.cloneNode(true);
     const diffCellSpans = diffCell.querySelectorAll("span");
 
@@ -89,26 +89,17 @@ function createUnavailableDiffCell(sourceCell) {
         diffCell.innerHTML = "n/a<br>n/a<br>n/a<br>";
     }
 
-    diffCell.setAttribute("title", "Keine Kursdaten verfuegbar");
+    diffCell.setAttribute("title", title);
     diffCell.classList.add("fndd-plugin-column");
     return diffCell;
 }
 
+function createUnavailableDiffCell(sourceCell) {
+    return createPlaceholderDiffCell(sourceCell, "Keine Kursdaten verfuegbar");
+}
+
 function createPendingDiffCell(sourceCell) {
-    const diffCell = sourceCell.cloneNode(true);
-    const diffCellSpans = diffCell.querySelectorAll("span");
-
-    if (diffCellSpans.length >= 3) {
-        diffCellSpans[0].textContent = "n/a";
-        diffCellSpans[1].textContent = "n/a";
-        diffCellSpans[2].textContent = "n/a";
-    } else {
-        diffCell.innerHTML = "n/a<br>n/a<br>n/a<br>";
-    }
-
-    diffCell.setAttribute("title", "Noch kein vorheriger Snapshot vorhanden");
-    diffCell.classList.add("fndd-plugin-column");
-    return diffCell;
+    return createPlaceholderDiffCell(sourceCell, "Noch kein vorheriger Snapshot vorhanden");
 }
 
 function ensurePluginColumnStyles() {
