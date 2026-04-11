@@ -160,6 +160,52 @@ let performanceEuroLast = 0;
 let performancePercentageLast = 0;
 let lastTimestamp = "Never";
 
+function buildPortfolioSnapshotValues(portfolioSummary) {
+  return {
+    currentValue: portfolioSummary.gesamtwert,
+    absolutePerformance: portfolioSummary.performanceEuro,
+    sinceBuyValue: 0
+  };
+}
+
+function updateHeaderDiffState(lastEntry, portfolioValues) {
+  if (!lastEntry) {
+    return;
+  }
+
+  const diffValues = calculateDiffValues(lastEntry, portfolioValues);
+  performanceEuroLast = diffValues?.absolutePerformanceDiff ?? 0;
+  performancePercentageLast = diffValues?.percentageDiff ?? 0;
+  lastTimestamp = lastEntry.timestamp ?? "Never";
+}
+
+function persistPortfolioSnapshotIfNeeded(lastEntry, portfolioValues, shouldPersistSnapshot) {
+  if (!shouldPersistSnapshot || !hasSnapshotValuesChanged(lastEntry, portfolioValues)) {
+    return false;
+  }
+
+  saveToDatabase(
+    DATABASE_KEY,
+    "Gesamt",
+    portfolioValues.currentValue,
+    portfolioValues.absolutePerformance,
+    portfolioValues.sinceBuyValue,
+    "portfolio:gesamt"
+  );
+  return true;
+}
+
+function renderPortfolioSummaryHeader(portfolioSummary) {
+  const headerTable = portfolioSummary.parentDiv.parentNode;
+  if (!headerTable) {
+    return;
+  }
+
+  changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
+  normalizeSummaryDisplay(headerTable);
+  headerTable.appendChild(createNewHeaderDiv());
+}
+
 function getPortfolioSummaryElements() {
   const perfGesamtDiv = findDivWithText("Perf. gesamt");
   if (!perfGesamtDiv?.parentNode) {
@@ -200,13 +246,27 @@ function getCurrentPortfolioSummary() {
   };
 }
 
-function getLastPortfolioSnapshotEntry() {
+function getPortfolioSnapshotContext() {
+  const portfolioSummary = getCurrentPortfolioSummary();
+  if (!portfolioSummary) {
+    return null;
+  }
+
   const entries = loadFromDatabase(DATABASE_KEY);
-  return entries.find((entry) => entry?.key === "portfolio:gesamt") || null;
+  const lastEntry = entries.find((entry) => entry?.key === "portfolio:gesamt")
+    || entries[0]
+    || null;
+
+  return {
+    portfolioSummary: portfolioSummary,
+    portfolioValues: buildPortfolioSnapshotValues(portfolioSummary),
+    lastEntry: lastEntry
+  };
 }
 
 function shouldRefreshPortfolioSnapshots(forceRefreshSnapshot) {
-  const lastEntry = getLastPortfolioSnapshotEntry();
+  const snapshotContext = getPortfolioSnapshotContext();
+  const lastEntry = snapshotContext?.lastEntry || null;
   if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, snapshotMinAgeMs)) {
     return true;
   }
@@ -216,21 +276,18 @@ function shouldRefreshPortfolioSnapshots(forceRefreshSnapshot) {
 }
 
 function refreshPortfolioSnapshot(forceRefreshSnapshot) {
-  const portfolioSummary = getCurrentPortfolioSummary();
-  if (!portfolioSummary) {
+  const snapshotContext = getPortfolioSnapshotContext();
+  if (!snapshotContext) {
     return { refreshed: false, timestamp: null };
   }
 
-  const lastEntry = getLastPortfolioSnapshotEntry();
+  const {
+    portfolioValues,
+    lastEntry
+  } = snapshotContext;
   const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(forceRefreshSnapshot);
-  const portfolioValues = {
-    currentValue: portfolioSummary.gesamtwert,
-    absolutePerformance: portfolioSummary.performanceEuro,
-    sinceBuyValue: 0
-  };
 
-  if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, portfolioValues)) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", portfolioSummary.gesamtwert, portfolioSummary.performanceEuro, 0, "portfolio:gesamt");
+  if (persistPortfolioSnapshotIfNeeded(lastEntry, portfolioValues, shouldPersistSnapshot)) {
     return { refreshed: true, timestamp: getCurrentTimestamp() };
   }
 
@@ -271,45 +328,20 @@ async function initPortfolioDiff() {
 
   applyTestPriceSimulationToPortfolio();
 
-  const portfolioSummary = getCurrentPortfolioSummary();
-  if (!portfolioSummary) {
+  const snapshotContext = getPortfolioSnapshotContext();
+  if (!snapshotContext) {
     return;
   }
 
-  const performanceEuro = portfolioSummary.performanceEuro;
-  const gesamtwert = portfolioSummary.gesamtwert;
-
-  const tupelPerformanceLast = loadFromDatabase(DATABASE_KEY);
-
-  const lastEntry = tupelPerformanceLast.find((entry) => entry?.key === "portfolio:gesamt")
-    || tupelPerformanceLast[0];
-  if (lastEntry) {
-    const diffValues = calculateDiffValues(lastEntry, {
-      currentValue: gesamtwert,
-      absolutePerformance: performanceEuro,
-      sinceBuyValue: 0
-    });
-
-    performanceEuroLast = diffValues?.absolutePerformanceDiff ?? 0;
-    performancePercentageLast = diffValues?.percentageDiff ?? 0;
-    lastTimestamp = lastEntry.timestamp ?? "Never";
-  }
-
+  const {
+    portfolioSummary,
+    portfolioValues,
+    lastEntry
+  } = snapshotContext;
+  updateHeaderDiffState(lastEntry, portfolioValues);
   const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(false);
-  if (shouldPersistSnapshot && hasSnapshotValuesChanged(lastEntry, {
-    currentValue: gesamtwert,
-    absolutePerformance: performanceEuro,
-    sinceBuyValue: 0
-  })) {
-    saveToDatabase(DATABASE_KEY, "Gesamt", gesamtwert, performanceEuro, 0, "portfolio:gesamt");
-  }
-
-  const headerTable = portfolioSummary.parentDiv.parentNode;
-  if (headerTable) {
-    changeClassOfChildren(headerTable, "grid__item-3", "grid__item-2");
-    normalizeSummaryDisplay(headerTable);
-    headerTable.appendChild(createNewHeaderDiv());
-  }
+  persistPortfolioSnapshotIfNeeded(lastEntry, portfolioValues, shouldPersistSnapshot);
+  renderPortfolioSummaryHeader(portfolioSummary);
 
   addNewColumnHeader(shouldPersistSnapshot);
 }
