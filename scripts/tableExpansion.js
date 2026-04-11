@@ -303,6 +303,11 @@ function setRowDiffSortValues(positionRow, diffValues, isSortable) {
     positionRow.dataset.lastDiffSumValue = isSortable ? String(diffValues.sinceBuyDiff) : "";
 }
 
+function insertDiffCell(positionRow, diffCell, referenceCell, diffValues, isSortable) {
+    setRowDiffSortValues(positionRow, diffValues, isSortable);
+    positionRow.insertBefore(diffCell, referenceCell);
+}
+
 function sortRowsByLastDiff(tableState, direction, valueKey) {
     const tbody = tableState.table.querySelector("tbody");
     if (!tbody) {
@@ -589,12 +594,11 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                         return;
                     }
 
-                    setRowDiffSortValues(positionRow, {
+                    insertDiffCell(positionRow, createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell, {
                         currentValueDiff: 0,
                         percentageDiff: 0,
                         sinceBuyDiff: 0
                     }, false);
-                    positionRow.insertBefore(createUnavailableDiffCell(warningPerformanceCell), warningPerformanceCell);
                     return;
                 }
 
@@ -617,12 +621,11 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
-                    setRowDiffSortValues(positionRow, {
+                    insertDiffCell(positionRow, createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell, {
                         currentValueDiff: 0,
                         percentageDiff: 0,
                         sinceBuyDiff: 0
                     }, false);
-                    positionRow.insertBefore(createPendingDiffCell(parsedRow.performanceCell), parsedRow.performanceCell);
                     return;
                 }
 
@@ -631,8 +634,7 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                     return;
                 }
 
-                setRowDiffSortValues(positionRow, diffValues, true);
-                positionRow.insertBefore(renderedDiffCell, parsedRow.performanceCell);
+                insertDiffCell(positionRow, renderedDiffCell, parsedRow.performanceCell, diffValues, true);
 
             }
 
