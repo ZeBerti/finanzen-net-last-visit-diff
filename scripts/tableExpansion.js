@@ -102,6 +102,43 @@ function createPendingDiffCell(sourceCell) {
     return createPlaceholderDiffCell(sourceCell, "Noch kein vorheriger Snapshot vorhanden");
 }
 
+function renderDiffCell(parsedRow, lastShareEntry, diffValues, positionIdentity) {
+    const diffCell = parsedRow.performanceCell.cloneNode(true);
+    diffCell.classList.add("fndd-plugin-column");
+
+    const diffCellSpans = diffCell.querySelectorAll("span");
+    if (diffCellSpans.length < 3) {
+        logWarn(`Skipping row '${parsedRow.shareName}' because cloned diff cell is incomplete`);
+        return null;
+    }
+
+    diffCellSpans[0].innerHTML = formatEuro(diffValues.currentValueDiff);
+    diffCellSpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
+    diffCellSpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
+    updateDiffSpanColor(diffCellSpans[0], diffValues.currentValueDiff);
+    updateDiffSpanColor(diffCellSpans[1], diffValues.percentageDiff);
+    updateDiffSpanColor(diffCellSpans[2], diffValues.sinceBuyDiff);
+
+    const previousCurrentValue = formatEuro(getEntryCurrentValue(lastShareEntry));
+    const tooltipLines = [
+        `Kursdifferenz: ${formatEuro(parsedRow.currentValue)} - ${previousCurrentValue} = ${formatEuro(diffValues.currentValueDiff)}`,
+        `Prozentdifferenz: (${formatEuro(parsedRow.currentValue)} - ${previousCurrentValue}) / ${previousCurrentValue} = ${formatPercent(diffValues.percentageDiff)}`,
+        `Gesamtdifferenz: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
+        `Snapshot: ${formatSnapshotTimestamp(lastShareEntry?.timestamp)}`
+    ];
+
+    if (positionIdentity.mode !== "stable") {
+        tooltipLines.push(`Matching: degradiert via ${positionIdentity.reason}`);
+    }
+
+    if (testPriceJitterEnabled) {
+        tooltipLines.push(`Testmodus: simulierte Kursbewegung ±${testPriceJitterPercent} %`);
+    }
+
+    diffCell.setAttribute("title", tooltipLines.join("\n"));
+    return diffCell;
+}
+
 function ensurePluginColumnStyles() {
     if (document.getElementById("fndd-plugin-column-styles")) {
         return;
@@ -578,9 +615,6 @@ function addNewColumnHeader(shouldPersistSnapshot) {
 
                 saveParsedRowSnapshot(parsedRow, lastShareEntry, shouldPersistSnapshot);
 
-                let tdCopy = parsedRow.performanceCell.cloneNode(true);
-                tdCopy.classList.add("fndd-plugin-column");
-
                 if (!lastShareEntry) {
                     logInfo(`No previous entry found for '${shareName}', rendering placeholder diff column`);
                     setRowDiffSortValues(positionRow, {
@@ -592,37 +626,13 @@ function addNewColumnHeader(shouldPersistSnapshot) {
                     return;
                 }
 
-                const tdCopySpans = tdCopy.querySelectorAll('span');
-                if (tdCopySpans.length < 3) {
-                    logWarn(`Skipping row '${shareName}' because cloned diff cell is incomplete`);
+                const renderedDiffCell = renderDiffCell(parsedRow, lastShareEntry, diffValues, positionIdentity);
+                if (!renderedDiffCell) {
                     return;
                 }
 
-                tdCopySpans[0].innerHTML = formatEuro(diffValues.currentValueDiff);
-                tdCopySpans[1].innerHTML = formatPercent(diffValues.percentageDiff);
-                tdCopySpans[2].innerHTML = formatEuro(diffValues.sinceBuyDiff);
-                updateDiffSpanColor(tdCopySpans[0], diffValues.currentValueDiff);
-                updateDiffSpanColor(tdCopySpans[1], diffValues.percentageDiff);
-                updateDiffSpanColor(tdCopySpans[2], diffValues.sinceBuyDiff);
                 setRowDiffSortValues(positionRow, diffValues, true);
-
-                const tooltipLines = [
-                    `Kursdifferenz: ${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatEuro(diffValues.currentValueDiff)}`,
-                    `Prozentdifferenz: (${formatEuro(parsedRow.currentValue)} - ${formatEuro(getEntryCurrentValue(lastShareEntry))}) / ${formatEuro(getEntryCurrentValue(lastShareEntry))} = ${formatPercent(diffValues.percentageDiff)}`,
-                    `Gesamtdifferenz: ${formatEuro(parsedRow.sinceBuyValue)} - ${formatEuro(getEntryValueSinceBuy(lastShareEntry))} = ${formatEuro(diffValues.sinceBuyDiff)}`,
-                    `Snapshot: ${formatSnapshotTimestamp(lastShareEntry?.timestamp)}`
-                ];
-
-                if (positionIdentity.mode !== "stable") {
-                    tooltipLines.push(`Matching: degradiert via ${positionIdentity.reason}`);
-                }
-
-                if (testPriceJitterEnabled) {
-                    tooltipLines.push(`Testmodus: simulierte Kursbewegung ±${testPriceJitterPercent} %`);
-                }
-
-                tdCopy.setAttribute("title", tooltipLines.join("\n"));
-                positionRow.insertBefore(tdCopy, parsedRow.performanceCell);
+                positionRow.insertBefore(renderedDiffCell, parsedRow.performanceCell);
 
             }
 
