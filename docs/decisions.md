@@ -1,4 +1,4 @@
-# decisions.md
+# Decisions
 
 ## Zweck
 - Dieses Dokument haelt Architektur-, Produkt- und Umsetzungsentscheidungen fuer die Chrome-Extension fest.
@@ -82,19 +82,46 @@
   - Aenderungen an der Seite koennen die Extension brechen.
   - Die Abhaengigkeit von Klassen, Texten und Tabellenstruktur muss bewusst dokumentiert und schrittweise entkoppelt werden.
 
-## DEC-006: Zuordnungsproblem bei Positionen ist bekannt, aber noch nicht geloest
-- Datum: 2026-03-15
-- Status: proposed
+## DEC-006: Depotpositionen werden primaer ueber `pkdepdatennr` identifiziert
+- Datum: 2026-04-06
+- Status: accepted
 - Kontext:
-  - Einzelne Tabellenzeilen lassen sich nicht immer eindeutig ueber eine stabile ID identifizieren.
-  - Name und sichtbare Werte reichen moeglicherweise nicht immer fuer eine robuste Wiedererkennung aus, insbesondere bei Sortierung oder mehrfach vorkommenden Eintraegen.
+  - Einzelne Tabellenzeilen koennen mehrfach denselben Namen oder dieselbe ISIN enthalten.
+  - Das Matching ueber Name oder sichtbare Werte fuehrte bei mehrfach vorkommenden Positionen zu falschen Diffs.
 - Entscheidung:
-  - Das Problem wird vorerst als offenes Architekturthema behandelt und nicht mit einer vorschnellen Heuristik als "geloest" angesehen.
+  - Positionen werden primaer ueber `pkdepdatennr` aus dem DOM identifiziert.
+  - Fallbacks ueber `isin + Index` oder `name + Index` bleiben nur als degradierter Modus erhalten.
 - Konsequenzen:
-  - Zunaechst werden reale Faelle gesammelt und die aktuelle Datenzuordnung analysiert.
-  - Eine kuenftige Entscheidung ueber einen stabileren Schluessel oder Matching-Ansatz ist notwendig.
+  - Mehrfach vorkommende Positionen koennen robust getrennt verglichen werden.
+  - Der degradierte Fallback bleibt ein bewusst schwacher Notbetrieb und sollte im UI bzw. Logging erkennbar bleiben.
+
+## DEC-007: Snapshot-Policy ist intervallgesteuert und aenderungsbasiert
+- Datum: 2026-04-06
+- Status: accepted
+- Kontext:
+  - Ohne Snapshot-Policy wurde der Referenzstand bei jedem Reload ueberschrieben.
+  - Dadurch wurde der Diff seit letztem Besuch fuer reale Nutzung und Tests schnell wertlos.
+- Entscheidung:
+  - Snapshots werden nur aktualisiert, wenn das konfigurierte Intervall abgelaufen ist und sich Werte geaendert haben.
+  - Fehlende Positions-Snapshots duerfen trotzdem initial angelegt werden.
+- Konsequenzen:
+  - Der Referenzstand bleibt zwischen Reloads stabil.
+  - Tests und reale Nutzung werden nachvollziehbarer.
+  - Snapshot-Zeitpunkt und Intervall werden zu einem expliziten Produktkonzept.
+
+## DEC-008: Eigene clientseitige Sortierung fuer Plugin-Spalten
+- Datum: 2026-04-08
+- Status: accepted
+- Kontext:
+  - `finanzen.net` kennt die nachtraeglich eingefuegten Plugin-Spalten nicht und kann sie nicht selbst sortieren.
+  - Fuer den Nutzen der Extension ist Sortierung nach den neuen Diff-Werten aber sehr hilfreich.
+- Entscheidung:
+  - Die Plugin-Spalten `± zuletzt`, `% zuletzt` und `∑ zuletzt` werden clientseitig ueber eine eigene DOM-Sortierung sortierbar gemacht.
+- Konsequenzen:
+  - Sortierung funktioniert unabhaengig von der nativen Tabellenlogik der Seite.
+  - Der Sortierzustand ist rein klientenseitig und nach Reload neu aufzubauen.
+  - Sonderzeilen ohne Daten muessen beim Sortieren bewusst nach unten behandelt werden.
 
 ## Offene Entscheidungen
 - Soll `localStorage` spaeter durch `chrome.storage` ersetzt werden?
-- Welcher Schluessel identifiziert eine Depotposition robust genug ueber mehrere Besuche hinweg?
 - Wie stark soll die UI spaeter fuer eine moegliche Veroeffentlichung ueberarbeitet werden?

@@ -68,6 +68,7 @@
   - das konfigurierte Intervall abgelaufen ist und sich Werte geaendert haben.
 - Mehrfaches Reloaden ohne Wertaenderung ueberschreibt den Referenzstand deshalb nicht.
 - Fehlende Positions-Snapshots duerfen trotzdem initial angelegt werden, auch wenn der Portfolio-Snapshot selbst nicht erneuert wird.
+- Das Intervall ist aktuell ueber das Popup konfigurierbar.
 
 ## Aktuelle Nutzung im Code
 - Lesen und Schreiben:
@@ -81,3 +82,4 @@
 - Semantik zwischen Gesamtdepot und Einzelpositionen expliziter trennen.
 - Fallback-Matching nur als Notbetrieb behandeln und im UI bzw. Logging klar kennzeichnen.
 - Persistiertes Schema weiter verschlanken, insbesondere `name`.
+- Mittelfristig Persistenz von `localStorage` nach `chrome.storage.local` neu bewerten.

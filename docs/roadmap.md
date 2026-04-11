@@ -1,4 +1,4 @@
-# roadmap.md
+# Roadmap
 
 ## Zielbild
 - Die Extension soll fuer das virtuelle Depot auf `finanzen.net` verlaesslich anzeigen, wie sich Gesamtdepot und Einzelpositionen seit dem letzten Besuch veraendert haben.
@@ -12,31 +12,29 @@
 - Solange das Plugin nur fuer den Eigengebrauch gedacht ist, darf pragmatisch gearbeitet werden, aber nicht chaotisch.
 
 ## Bekannte Unsicherheiten
-- Die Zuordnung von Tabellenwerten zu konkreten Positionen ist teilweise fragil.
-- Insbesondere Sortierung und Wiedererkennung einzelner Zeilen sind schwierig, wenn keine stabile ID vorhanden ist und Name plus sichtbare Werte nicht eindeutig genug sind.
-- Dieses Problem ist bekannt, aber fuer die Planung zunaechst als technisches Risiko erfasst. Die genaue Loesung wird separat validiert.
+- Die Zuordnung von Tabellenwerten zu konkreten Positionen ist ueber `pkdepdatennr` inzwischen deutlich robuster.
+- Fragil bleibt der degradierte Fallback, falls diese ID im DOM einmal nicht verfuegbar sein sollte.
+- Auch kuenftige Layout-Aenderungen auf `finanzen.net` bleiben ein reales Risiko fuer Parsing und Rendering.
 
 ## Phase 1: Stabilisieren
-- Content-Script-Ausfuehrung robuster machen:
-  - defensive DOM-Zugriffe
-  - saubere Abbruchpfade bei fehlenden Elementen
-  - weniger Annahmen ueber sofort verfuegbare DOM-Strukturen
-- Offensichtliche Laufzeitfehler und Null-Zugriffe beseitigen.
-- Logging aufraeumen:
-  - irrelevante Debug-Ausgaben reduzieren
-  - wichtige Fehlersituationen klarer kennzeichnen
-- Lokale Referenzseiten unter `localWebsiteFinanzenNet/` gezielt fuer Reproduktion und Regressionen nutzen.
+- Defensive DOM-Zugriffe und saubere Abbruchpfade sind eingefuehrt.
+- Offensichtliche Laufzeitfehler, Null-Zugriffe und ueberlaute Logs wurden reduziert.
+- Lokale Referenzseiten unter `localWebsiteFinanzenNet/` werden bereits fuer Reproduktion und Regressionen genutzt.
+- Offene Restarbeit:
+  - weitere DOM-Annahmen schrittweise abbauen
+  - Sonderfaelle mit fehlenden Kursdaten weiter beobachten
 
 ## Phase 2: Datenmodell und Persistenz haerten
-- Aktuelles `localStorage`-Schema dokumentieren.
-- Inkonsistente Feldnamen und historische Altlasten identifizieren.
-- Berechnungen fuer:
-  - aktueller Stand
-  - letzter Stand
-  - Differenz seit letztem Besuch
-  zentralisieren und vereinheitlichen.
-- Pruefen, wie mehrere gleichnamige Positionen oder mehrdeutige Eintraege sauberer behandelt werden koennen.
-- Das Sortierungs- und Zuordnungsproblem systematisch untersuchen und moegliche Schluesselstrategien festhalten.
+- Das aktuelle `localStorage`-Schema ist dokumentiert und auf ein kanonisches Format reduziert.
+- Legacy-Felder und `productIndex` wurden aus der Persistenz entfernt.
+- Snapshot-Policy ist eingefuehrt:
+  - Intervall konfigurierbar
+  - nur speichern bei echtem Aenderungsbedarf
+  - fehlende Positions-Snapshots duerfen initial angelegt werden
+- Mehrfach vorkommende Positionen werden primaer ueber `pkdepdatennr` erkannt.
+- Offene Restarbeit:
+  - mittelfristig `localStorage` gegen `chrome.storage.local` pruefen
+  - `name` spaeter eventuell ebenfalls aus dem Persistenzschema entfernen
 
 ## Phase 3: Codequalitaet verbessern
 - Verantwortlichkeiten sauber trennen:
@@ -45,27 +43,30 @@
   - Daten speichern/laden
   - Differenzen berechnen
   - UI rendern
-- Fragile Tabellenindizes reduzieren oder an zentraler Stelle dokumentieren.
-- Doppelte oder schwer benannte Logik bereinigen.
-- Kleine, leicht testbare Hilfsfunktionen bevorzugen statt weiterer monolithischer Content-Script-Logik.
+- Header-basierte Spaltenerkennung ersetzt bereits einen Teil der frueheren magischen Tabellenindizes.
+- Parsing und Sortierung wurden bereits in kleinere Helfer zerlegt.
+- Offene Restarbeit:
+  - `content.js` weiter aufteilen
+  - Diff-Zellen-Erzeugung in `tableExpansion.js` weiter vereinheitlichen
+  - kleine Hilfsfunktionen testseitig breiter absichern
 
 ## Phase 4: Usability verbessern
-- Anzeigen fuer "seit letztem Besuch" besser verstaendlich machen:
-  - klare Beschriftung
-  - sinnvolle Tooltips
-  - nachvollziehbarer Zeitbezug
-- Sichtbarkeit verbessern, ohne die bestehende Depotansicht zu ueberladen.
-- Randfaelle besser behandeln:
-  - erster Besuch ohne gespeicherte Daten
-  - unvollstaendige Tabellenzeilen
-  - negative Werte
-  - Sonderzeilen oder Warnhinweise in der Tabelle
+- Header, Tooltip und Zusatzspalten wurden bereits sprachlich und visuell angenaehert.
+- Popup bietet inzwischen Snapshot-Intervall und Testmodus fuer simulierte Kursbewegungen.
+- Die drei Plugin-Subspalten sind clientseitig sortierbar:
+  - `± zuletzt`
+  - `% zuletzt`
+  - `∑ zuletzt`
+- Randfaelle wie Erstbesuch, Warnzeilen ohne Kursdaten und fehlende Positions-Snapshots werden bereits abgefangen.
+- Offene Restarbeit:
+  - Copy weiter schaerfen
+  - fehlende Kursdaten weiter beobachten
 
 ## Phase 5: Produktisierung vorbereiten
-- Manifest, Rechte und Beschreibung fuer eine spaetere Veroeffentlichung pruefen.
-- Optionen, Versionswechsel und Datenmigration sauberer aufsetzen.
-- Manuelle Testcheckliste fuer mehrere Depotzustaende anlegen.
-- UI und Copy so weit saubermachen, dass eine externe Nutzung realistisch wird.
+- GitHub-Repository ist angelegt und der aktuelle Stand ist bereits veroeffentlicht.
+- Chrome-Web-Store-Vorbereitung bleibt als naechster groesserer Produktisierungsschritt offen.
+- Manifest, Rechte, Beschreibung und Testcheckliste sollten vor einer Veroeffentlichung gezielt gehaertet werden.
+- UI und Copy muessen fuer externe Nutzer noch etwas sauberer und selbsterklaerender werden.
 
 ## Laufende Arbeitsweise
 - Neue Arbeit bevorzugt in kleinen, isolierten Schritten.
@@ -78,7 +79,7 @@
 - Refactors nur dann priorisieren, wenn sie konkrete Fehler oder Wartungsprobleme loesen.
 
 ## Naechste sinnvolle Tasks
-- DOM-Zugriffe in `content.js` und `tableExpansion.js` gegen fehlende Elemente absichern.
-- Aktuelles Datenmodell aus `localStorage` explizit dokumentieren.
-- Relevante Berechnungen fuer Differenzen an einer Stelle zusammenziehen.
-- Das Zuordnungsproblem bei Sortierung und mehrfach vorkommenden Namen mit realen Beispielen analysieren.
+- `content.js` weiter in kleinere Verantwortungsbereiche zerlegen.
+- Diff-Zellen-Erzeugung in `tableExpansion.js` weiter vereinheitlichen.
+- Kleine Helper-Tests fuer Formatierung und Snapshot-Logik ausbauen.
+- Chrome-Web-Store-Vorbereitung und Release-Checkliste planen.
