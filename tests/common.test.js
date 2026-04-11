@@ -7,6 +7,7 @@ const {
   formatPercent,
   formatSnapshotTimestamp,
   formatSnapshotIntervalLabel,
+  getDeterministicTestPriceDirection,
   hasSnapshotValuesChanged,
   shouldRefreshSnapshot
 } = require("../scripts/common.js");
@@ -37,7 +38,23 @@ test("hasSnapshotValuesChanged detects identical values", () => {
   assert.equal(hasSnapshotValuesChanged(entry, entry), false);
 });
 
-test("calculateDiffValues uses forward direction", () => {
+test("hasSnapshotValuesChanged detects changed values", () => {
+  const previousEntry = {
+    currentValue: 100,
+    absolutePerformance: 10,
+    sinceBuyValue: 10
+  };
+
+  const currentValues = {
+    currentValue: 100,
+    absolutePerformance: 15,
+    sinceBuyValue: 10
+  };
+
+  assert.equal(hasSnapshotValuesChanged(previousEntry, currentValues), true);
+});
+
+test("calculateDiffValues uses forward direction and relative percentage change", () => {
   const diff = calculateDiffValues(
     {
       currentValue: 100,
@@ -59,6 +76,23 @@ test("calculateDiffValues uses forward direction", () => {
   });
 });
 
+test("calculateDiffValues returns zero percentage diff when snapshot price is zero", () => {
+  const diff = calculateDiffValues(
+    {
+      currentValue: 0,
+      absolutePerformance: 0,
+      sinceBuyValue: 0
+    },
+    {
+      currentValue: 10,
+      absolutePerformance: 10,
+      sinceBuyValue: 10
+    }
+  );
+
+  assert.equal(diff.percentageDiff, 0);
+});
+
 test("format helpers use German display conventions", () => {
   assert.equal(formatPercent(1.5), "1,50 %");
   assert.equal(formatSnapshotIntervalLabel(DEFAULT_SNAPSHOT_MIN_AGE_MS), "2 Stunden");
@@ -66,4 +100,17 @@ test("format helpers use German display conventions", () => {
 
 test("formatSnapshotTimestamp returns a readable timestamp", () => {
   assert.equal(formatSnapshotTimestamp("2026-04-07T12:34:56.000Z").includes("2026"), true);
+});
+
+test("formatSnapshotTimestamp handles missing or invalid timestamps", () => {
+  assert.equal(formatSnapshotTimestamp(null), "kein Snapshot");
+  assert.equal(formatSnapshotTimestamp("kaputt"), "ungueltig");
+});
+
+test("getDeterministicTestPriceDirection is stable for the same input", () => {
+  const firstValue = getDeterministicTestPriceDirection("depot-entry:33337146");
+  const secondValue = getDeterministicTestPriceDirection("depot-entry:33337146");
+
+  assert.equal(firstValue, secondValue);
+  assert.equal(Math.abs(firstValue), 1);
 });
