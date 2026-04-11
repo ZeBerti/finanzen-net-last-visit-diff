@@ -264,9 +264,7 @@ function getPortfolioSnapshotContext() {
   };
 }
 
-function shouldRefreshPortfolioSnapshots(forceRefreshSnapshot) {
-  const snapshotContext = getPortfolioSnapshotContext();
-  const lastEntry = snapshotContext?.lastEntry || null;
+function shouldRefreshPortfolioSnapshots(lastEntry, forceRefreshSnapshot) {
   if (forceRefreshSnapshot || shouldRefreshSnapshot(lastEntry, snapshotMinAgeMs)) {
     return true;
   }
@@ -285,7 +283,7 @@ function refreshPortfolioSnapshot(forceRefreshSnapshot) {
     portfolioValues,
     lastEntry
   } = snapshotContext;
-  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(forceRefreshSnapshot);
+  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(lastEntry, forceRefreshSnapshot);
 
   if (persistPortfolioSnapshotIfNeeded(lastEntry, portfolioValues, shouldPersistSnapshot)) {
     return { refreshed: true, timestamp: getCurrentTimestamp() };
@@ -314,17 +312,31 @@ function resetPortfolioSnapshots() {
   localStorage.removeItem(DATABASE_KEY);
 }
 
-async function initPortfolioDiff() {
+async function loadExtensionSettings() {
   try {
-    snapshotMinAgeMs = await getSnapshotMinAgeMs();
-    testPriceJitterEnabled = await getDebugPriceJitterEnabled();
-    testPriceJitterPercent = await getDebugPriceJitterPercent();
+    return {
+      snapshotMinAgeMs: await getSnapshotMinAgeMs(),
+      testPriceJitterEnabled: await getDebugPriceJitterEnabled(),
+      testPriceJitterPercent: await getDebugPriceJitterPercent()
+    };
   } catch (error) {
     logWarn(`Failed to load extension settings: ${error}`);
-    snapshotMinAgeMs = DEFAULT_SNAPSHOT_MIN_AGE_MS;
-    testPriceJitterEnabled = false;
-    testPriceJitterPercent = 5;
+    return {
+      snapshotMinAgeMs: DEFAULT_SNAPSHOT_MIN_AGE_MS,
+      testPriceJitterEnabled: false,
+      testPriceJitterPercent: 5
+    };
   }
+}
+
+function applyLoadedSettings(settings) {
+  snapshotMinAgeMs = settings.snapshotMinAgeMs;
+  testPriceJitterEnabled = settings.testPriceJitterEnabled;
+  testPriceJitterPercent = settings.testPriceJitterPercent;
+}
+
+async function initPortfolioDiff() {
+  applyLoadedSettings(await loadExtensionSettings());
 
   applyTestPriceSimulationToPortfolio();
 
@@ -339,7 +351,7 @@ async function initPortfolioDiff() {
     lastEntry
   } = snapshotContext;
   updateHeaderDiffState(lastEntry, portfolioValues);
-  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(false);
+  const shouldPersistSnapshot = shouldRefreshPortfolioSnapshots(lastEntry, false);
   persistPortfolioSnapshotIfNeeded(lastEntry, portfolioValues, shouldPersistSnapshot);
   renderPortfolioSummaryHeader(portfolioSummary);
 
