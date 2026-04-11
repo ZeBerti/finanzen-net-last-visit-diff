@@ -19,6 +19,11 @@ function formatSnapshotIntervalLabel(intervalMs) {
   }
 
   const totalHours = totalMinutes / 60;
+  if (totalHours >= 24) {
+    const totalDays = totalHours / 24;
+    return totalDays === 1 ? "1 Tag" : `${totalDays} Tage`;
+  }
+
   if (totalHours === 1) {
     return "1 Stunde";
   }
