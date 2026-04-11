@@ -358,71 +358,87 @@ async function initPortfolioDiff() {
   addNewColumnHeader(shouldPersistSnapshot);
 }
 
+function reloadPageSoon() {
+  setTimeout(function() {
+    window.location.reload();
+  }, 100);
+}
+
+function handleGetSnapshotStatus(sendResponse) {
+  sendResponse({ ok: true, status: getPopupSnapshotStatus() });
+  return false;
+}
+
+function handleUpdateSnapshotInterval(message, sendResponse) {
+  snapshotMinAgeMs = Number(message.intervalMs) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
+  sendResponse({ ok: true });
+  reloadPageSoon();
+  return false;
+}
+
+function handleUpdateTestPriceJitter(message, sendResponse) {
+  testPriceJitterEnabled = Boolean(message.enabled);
+  testPriceJitterPercent = Number(message.percent) || 5;
+  sendResponse({ ok: true });
+  reloadPageSoon();
+  return false;
+}
+
+function handleUpdateTestPriceJitterPercent(message, sendResponse) {
+  testPriceJitterPercent = Number(message.percent) || 5;
+  sendResponse({ ok: true });
+  reloadPageSoon();
+  return false;
+}
+
+function handleRefreshSnapshotsNow(sendResponse) {
+  const portfolioRefreshResult = refreshPortfolioSnapshot(true);
+  const positionRefreshResult = refreshPositionSnapshots(portfolioRefreshResult.refreshed);
+
+  sendResponse({
+    ok: true,
+    refreshedPortfolioSnapshot: portfolioRefreshResult.refreshed,
+    refreshedPositions: positionRefreshResult.refreshedCount
+  });
+
+  reloadPageSoon();
+  return false;
+}
+
+function handleResetSnapshots(sendResponse) {
+  resetPortfolioSnapshots();
+  sendResponse({ ok: true });
+  reloadPageSoon();
+  return false;
+}
+
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   if (!message?.type) {
     return false;
   }
 
   if (message.type === "popup:getSnapshotStatus") {
-    sendResponse({ ok: true, status: getPopupSnapshotStatus() });
-    return false;
+    return handleGetSnapshotStatus(sendResponse);
   }
 
   if (message.type === "popup:updateSnapshotInterval") {
-    snapshotMinAgeMs = Number(message.intervalMs) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
-    sendResponse({ ok: true });
-
-    setTimeout(function() {
-      window.location.reload();
-    }, 100);
-    return false;
+    return handleUpdateSnapshotInterval(message, sendResponse);
   }
 
   if (message.type === "popup:updateTestPriceJitter") {
-    testPriceJitterEnabled = Boolean(message.enabled);
-    testPriceJitterPercent = Number(message.percent) || 5;
-    sendResponse({ ok: true });
-
-    setTimeout(function() {
-      window.location.reload();
-    }, 100);
-    return false;
+    return handleUpdateTestPriceJitter(message, sendResponse);
   }
 
   if (message.type === "popup:updateTestPriceJitterPercent") {
-    testPriceJitterPercent = Number(message.percent) || 5;
-    sendResponse({ ok: true });
-
-    setTimeout(function() {
-      window.location.reload();
-    }, 100);
-    return false;
+    return handleUpdateTestPriceJitterPercent(message, sendResponse);
   }
 
   if (message.type === "popup:refreshSnapshotsNow") {
-    const portfolioRefreshResult = refreshPortfolioSnapshot(true);
-    const positionRefreshResult = refreshPositionSnapshots(portfolioRefreshResult.refreshed);
-
-    sendResponse({
-      ok: true,
-      refreshedPortfolioSnapshot: portfolioRefreshResult.refreshed,
-      refreshedPositions: positionRefreshResult.refreshedCount
-    });
-
-    setTimeout(function() {
-      window.location.reload();
-    }, 100);
-    return false;
+    return handleRefreshSnapshotsNow(sendResponse);
   }
 
   if (message.type === "popup:resetSnapshots") {
-    resetPortfolioSnapshots();
-    sendResponse({ ok: true });
-
-    setTimeout(function() {
-      window.location.reload();
-    }, 100);
-    return false;
+    return handleResetSnapshots(sendResponse);
   }
 
   return false;
