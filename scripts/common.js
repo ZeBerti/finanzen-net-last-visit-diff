@@ -230,6 +230,11 @@ function formatSnapshotIntervalLabel(intervalMs) {
         return `${totalMinutes} Minuten`;
     }
 
+    const totalDays = totalMinutes / (60 * 24);
+    if (Number.isInteger(totalDays) && totalDays >= 1) {
+        return totalDays === 1 ? "1 Tag" : `${totalDays} Tage`;
+    }
+
     const totalHours = totalMinutes / 60;
     if (totalHours === 1) {
         return "1 Stunde";
@@ -355,6 +360,7 @@ if (typeof module !== "undefined" && module.exports) {
     DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY,
     SNAPSHOT_INTERVAL_SETTING_KEY,
     calculateDiffValues,
+    extractNumber,
     formatPercent,
     formatSnapshotTimestamp,
     formatSnapshotIntervalLabel,

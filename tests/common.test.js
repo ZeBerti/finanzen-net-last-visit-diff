@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   DEFAULT_SNAPSHOT_MIN_AGE_MS,
   calculateDiffValues,
+  extractNumber,
   formatPercent,
   formatSnapshotTimestamp,
   formatSnapshotIntervalLabel,
@@ -96,6 +97,8 @@ test("calculateDiffValues returns zero percentage diff when snapshot price is ze
 test("format helpers use German display conventions", () => {
   assert.equal(formatPercent(1.5), "1,50 %");
   assert.equal(formatSnapshotIntervalLabel(DEFAULT_SNAPSHOT_MIN_AGE_MS), "2 Stunden");
+  assert.equal(formatSnapshotIntervalLabel(2 * 24 * 60 * 60 * 1000), "2 Tage");
+  assert.equal(formatSnapshotIntervalLabel(5 * 24 * 60 * 60 * 1000), "5 Tage");
 });
 
 test("formatSnapshotTimestamp returns a readable timestamp", () => {
@@ -113,4 +116,10 @@ test("getDeterministicTestPriceDirection is stable for the same input", () => {
 
   assert.equal(firstValue, secondValue);
   assert.equal(Math.abs(firstValue), 1);
+});
+
+test("extractNumber parses formatted euro values", () => {
+  assert.equal(extractNumber("1.531,00 €"), 1531);
+  assert.equal(extractNumber("-153,10 €"), -153.1);
+  assert.equal(extractNumber(undefined), 0);
 });
