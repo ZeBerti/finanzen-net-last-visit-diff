@@ -1,3 +1,5 @@
+const extensionApi = globalThis.extensionApi || null;
+
 //# import { createNewHeaderDiv } from './tableExpansion.js';
 
 function readFromStorage(key, fallbackValue) {
@@ -245,20 +247,12 @@ function formatSnapshotIntervalLabel(intervalMs) {
 
 function readExtensionStorage(defaultValues) {
   return new Promise(function(resolve, reject) {
-    if (typeof chrome === "undefined" || !chrome.storage?.local) {
+    if (!extensionApi?.storage?.local) {
       resolve(defaultValues);
       return;
     }
 
-    chrome.storage.local.get(defaultValues, function(result) {
-      const error = chrome.runtime?.lastError;
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(result);
-    });
+    extensionApi.storage.local.get(defaultValues).then(resolve).catch(reject);
   });
 }
 

@@ -132,8 +132,35 @@
   - `% zuletzt` wird kuenftig als relative Aenderung `((aktuell - Snapshot) / Snapshot) * 100` berechnet.
   - Die Persistenz des Felds `percentagePerformance` wird dafuer nicht mehr benoetigt.
 - Konsequenzen:
-  - `% zuletzt` ist direkt an `± zuletzt` gekoppelt und leichter verstaendlich.
-  - Die Persistenz kann weiter verschlankt werden.
+- `% zuletzt` ist direkt an `± zuletzt` gekoppelt und leichter verstaendlich.
+- Die Persistenz kann weiter verschlankt werden.
+
+## DEC-010: Chrome und Firefox teilen sich denselben Laufzeitcode, aber getrennte Release-Pakete
+- Datum: 2026-04-12
+- Status: accepted
+- Kontext:
+  - Die aktuelle Extension nutzt nur wenige WebExtension-APIs und ist grundsaetzlich browsernah genug fuer Firefox.
+  - Fuer Store- und Signing-Anforderungen unterscheiden sich Chrome und Firefox aber beim Manifest und Packaging.
+- Entscheidung:
+  - Chrome und Firefox nutzen denselben Popup- und Content-Script-Code.
+  - Release-Artefakte werden browsergetrennt gebaut.
+  - Firefox-spezifische Manifest-Felder werden nur im Firefox-Build erzeugt.
+- Konsequenzen:
+  - Der Hauptcode bleibt weitgehend einfach und ohne Browser-Forks.
+  - Release-Builds muessen beide Paketvarianten erzeugen.
+  - Firefox erhaelt eine eigene Gecko-ID und eigene AMO-Metadaten.
+
+## DEC-011: Erste Firefox-Unterstuetzung ist auf Desktop fokussiert
+- Datum: 2026-04-12
+- Status: accepted
+- Kontext:
+  - Der primaere Nutzungskontext der Extension ist die Depotansicht am Desktop.
+  - Firefox Android wuerde einen weiteren Test- und Support-Pfad aufmachen.
+- Entscheidung:
+  - Die erste Firefox-Version wird fuer Desktop vorbereitet.
+- Konsequenzen:
+  - AMO-Vorbereitung bleibt einfacher.
+  - Android kann spaeter separat bewertet werden.
 
 ## Offene Entscheidungen
 - Soll `localStorage` spaeter durch `chrome.storage` ersetzt werden?

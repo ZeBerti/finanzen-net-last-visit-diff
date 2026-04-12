@@ -25,7 +25,8 @@ npm run build:release
 
 Danach liegt das Paket unter:
 
-`dist/finanzen-net-last-visit-diff.zip`
+- `dist/finanzen-net-last-visit-diff-chrome.zip`
+- `dist/finanzen-net-last-visit-diff-firefox.zip`
 
 Der ZIP-Inhalt sollte mindestens enthalten:
 
@@ -85,6 +86,4 @@ Pruefen:
 
 Vor der echten Einreichung brauchen wir noch:
 
-- Screenshots
-- Privacy-Policy-Link mit oeffentlicher URL, idealerweise ueber GitHub Pages auf Basis von `docs/privacy-policy.html`
-- ZIP-Datei fuer den Upload
+- verbessertes Screenshot-Set fuer den Store

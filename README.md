@@ -1,6 +1,6 @@
 # Finanzen.net Last Visit Diff
 
-Chrome extension for `finanzen.net` that adds portfolio diffs since the last snapshot or visit.
+Browser extension for `finanzen.net` that adds portfolio diffs since the last snapshot or visit.
 
 ## What it does
 
@@ -13,6 +13,11 @@ On `finanzen.net/depot/*` pages the extension adds:
   - `% zuletzt`
   - `∑ zuletzt`
 - snapshot controls in the popup
+
+## Supported browsers
+
+- Google Chrome
+- Mozilla Firefox
 
 ## How it works
 
@@ -34,7 +39,7 @@ The extension currently uses:
 
 ## Development
 
-Load the extension in Chrome as an unpacked extension from the project root:
+Load the extension as an unpacked extension from the project root:
 
 `/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff`
 
@@ -44,6 +49,17 @@ Run tests with:
 npm test
 ```
 
+Build release packages with:
+
+```bash
+npm run build:release
+```
+
+This creates:
+
+- `dist/finanzen-net-last-visit-diff-chrome.zip`
+- `dist/finanzen-net-last-visit-diff-firefox.zip`
+
 ## Project docs
 
 Additional project notes live in [`docs/`](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs):
@@ -51,6 +67,8 @@ Additional project notes live in [`docs/`](/Users/stefanebonnek/Projekte/dev/Chr
 - [roadmap.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/roadmap.md)
 - [decisions.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/decisions.md)
 - [local-storage-schema.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/local-storage-schema.md)
+- [chrome-web-store-release.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/chrome-web-store-release.md)
+- [firefox-amo-release.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/firefox-amo-release.md)
 - [todo.md](/Users/stefanebonnek/Projekte/dev/ChromePlugin/finanzenDotNetDiff/FinanzenDotNetDiff/docs/todo.md)
 
 ## Disclaimer

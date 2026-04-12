@@ -1,4 +1,4 @@
-const extensionVersion = chrome.runtime?.getManifest?.().version || "unknown";
+const extensionVersion = extensionApi?.runtime?.getManifest?.().version || "unknown";
 logInfo(`start finanzen.net extension v${extensionVersion}`)
 // lösche werbung
 
@@ -412,7 +412,7 @@ function handleResetSnapshots(sendResponse) {
   return false;
 }
 
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+extensionApi.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   if (!message?.type) {
     return false;
   }

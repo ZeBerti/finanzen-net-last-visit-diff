@@ -9,7 +9,7 @@
 - Store-Metadaten finalisieren: Beschreibung, Screenshots, Privacy-Link und Upload-Paket.
 - Screenshots fuer den Chrome Web Store erstellen.
 - Store-Screenshots spaeter in besserem Format neu aufnehmen: groesser, weniger eng gecroppt und mit aktuellem UI-Stand.
-- GitHub Pages fuer `docs/` aktivieren, damit Privacy Policy und Projektseite oeffentlich erreichbar sind.
+- Firefox-Release in Firefox Desktop manuell testen und danach AMO-Einreichung vorbereiten.
 
 ## Technik
 - `content.js` weiter aufteilen: Header-Rendering, Snapshot-Logik und Message-Handling staerker trennen.

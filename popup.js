@@ -1,3 +1,4 @@
+const extensionApi = globalThis.extensionApi;
 const statusMessageElement = document.getElementById("status-message");
 const snapshotIntervalSelectElement = document.getElementById("snapshot-interval-select");
 const snapshotTimestampElement = document.getElementById("snapshot-timestamp");
@@ -65,7 +66,7 @@ function setButtonsDisabled(isDisabled) {
 }
 
 async function getActiveTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
   return tabs[0] || null;
 }
 
@@ -75,40 +76,40 @@ async function sendMessageToActiveTab(message) {
     throw new Error("Keine aktive Browser-Registerkarte gefunden.");
   }
 
-  return chrome.tabs.sendMessage(activeTab.id, message);
+  return extensionApi.tabs.sendMessage(activeTab.id, message);
 }
 
 async function loadSnapshotIntervalSetting() {
-  const settings = await chrome.storage.local.get({ [SNAPSHOT_INTERVAL_SETTING_KEY]: DEFAULT_SNAPSHOT_MIN_AGE_MS });
+  const settings = await extensionApi.storage.local.get({ [SNAPSHOT_INTERVAL_SETTING_KEY]: DEFAULT_SNAPSHOT_MIN_AGE_MS });
   return Number(settings[SNAPSHOT_INTERVAL_SETTING_KEY]) || DEFAULT_SNAPSHOT_MIN_AGE_MS;
 }
 
 async function saveSnapshotIntervalSetting(intervalMs) {
-  await chrome.storage.local.set({ [SNAPSHOT_INTERVAL_SETTING_KEY]: intervalMs });
+  await extensionApi.storage.local.set({ [SNAPSHOT_INTERVAL_SETTING_KEY]: intervalMs });
 }
 
 async function loadTestPriceJitterSetting() {
-  const settings = await chrome.storage.local.get({ [DEBUG_PRICE_JITTER_SETTING_KEY]: false });
+  const settings = await extensionApi.storage.local.get({ [DEBUG_PRICE_JITTER_SETTING_KEY]: false });
   return Boolean(settings[DEBUG_PRICE_JITTER_SETTING_KEY]);
 }
 
 async function saveTestPriceJitterSetting(isEnabled) {
-  await chrome.storage.local.set({ [DEBUG_PRICE_JITTER_SETTING_KEY]: Boolean(isEnabled) });
+  await extensionApi.storage.local.set({ [DEBUG_PRICE_JITTER_SETTING_KEY]: Boolean(isEnabled) });
 }
 
 async function loadTestPriceJitterPercentSetting() {
-  const settings = await chrome.storage.local.get({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: 5 });
+  const settings = await extensionApi.storage.local.get({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: 5 });
   return Number(settings[DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]) || 5;
 }
 
 async function saveTestPriceJitterPercentSetting(percent) {
-  await chrome.storage.local.set({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: Number(percent) || 5 });
+  await extensionApi.storage.local.set({ [DEBUG_PRICE_JITTER_PERCENT_SETTING_KEY]: Number(percent) || 5 });
 }
 
 function renderStatus(status) {
   snapshotTimestampElement.textContent = formatSnapshotTimestamp(status.lastSnapshotTimestamp);
   entryCountElement.textContent = String(status.entryCount ?? 0);
-  versionLabelElement.textContent = `Extension v${status.version || chrome.runtime.getManifest().version}`;
+  versionLabelElement.textContent = `Extension v${status.version || extensionApi.runtime.getManifest().version}`;
 
   if (status.testPriceJitterEnabled) {
     setStatus(`Testmodus aktiv. Sichtbare Kurse werden abwechselnd um ±${status.testPriceJitterPercent} % simuliert.`, false);
@@ -148,7 +149,7 @@ async function refreshStatus() {
     testPriceJitterPercentInputElement.value = String(testPriceJitterPercent);
     snapshotTimestampElement.textContent = "-";
     entryCountElement.textContent = "-";
-    versionLabelElement.textContent = `Extension v${chrome.runtime.getManifest().version}`;
+    versionLabelElement.textContent = `Extension v${extensionApi.runtime.getManifest().version}`;
     setStatus("Die aktive Seite ist keine geladene finanzen.net-Depotseite oder die Extension wurde dort noch nicht injiziert.", true);
   }
 }
