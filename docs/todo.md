@@ -9,7 +9,6 @@
 - Store-Metadaten finalisieren: Beschreibung, Screenshots, Privacy-Link und Upload-Paket.
 - Screenshots fuer den Chrome Web Store erstellen.
 - Store-Screenshots spaeter in besserem Format neu aufnehmen: groesser, weniger eng gecroppt und mit aktuellem UI-Stand.
-- Privacy-Policy-Link mit oeffentlicher URL bereitstellen, am besten ueber `docs/privacy-policy.html`.
 - GitHub Pages fuer `docs/` aktivieren, damit Privacy Policy und Projektseite oeffentlich erreichbar sind.
 
 ## Technik

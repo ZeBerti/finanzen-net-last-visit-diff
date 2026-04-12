@@ -64,8 +64,10 @@ Alternative:
 ## Notes for the Store Form
 
 - Privacy Policy:
-  - use `docs/privacy-policy.md` as source
+  - public URL:
+    - https://zeberti.github.io/finanzen-net-last-visit-diff/privacy-policy.html
 - Support / Homepage:
-  - GitHub repo
+  - GitHub repo:
+    - https://github.com/ZeBerti/finanzen-net-last-visit-diff
 - Single purpose:
   - compare current finanzen.net depot values with earlier local snapshots

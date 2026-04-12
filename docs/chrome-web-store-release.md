@@ -67,6 +67,10 @@ Im Chrome Web Store Developer Dashboard werden mindestens benoetigt:
 - Screenshots
 - Privacy Policy Link
 
+Aktuelle Privacy-Policy-URL:
+
+- https://zeberti.github.io/finanzen-net-last-visit-diff/privacy-policy.html
+
 ## Nach dem Upload
 
 Pruefen:
