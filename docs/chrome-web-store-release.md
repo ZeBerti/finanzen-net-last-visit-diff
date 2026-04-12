@@ -82,5 +82,5 @@ Pruefen:
 Vor der echten Einreichung brauchen wir noch:
 
 - Screenshots
-- Privacy-Policy-Link mit oeffentlicher URL
+- Privacy-Policy-Link mit oeffentlicher URL, idealerweise ueber GitHub Pages auf Basis von `docs/privacy-policy.html`
 - ZIP-Datei fuer den Upload

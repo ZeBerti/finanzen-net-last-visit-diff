@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Finanzen.net Last Visit Diff</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f0e6;
+        --panel: #fffdf8;
+        --text: #233127;
+        --muted: #5d675d;
+        --border: #d8cfbf;
+        --accent: #2f7d57;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        background: linear-gradient(180deg, #f2ede2 0%, #ebe3d5 100%);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 760px;
+        margin: 48px auto;
+        padding: 0 20px;
+      }
+
+      article {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 32px 28px;
+        box-shadow: 0 10px 30px rgba(35, 49, 39, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 2.1rem;
+        line-height: 1.1;
+      }
+
+      p,
+      li {
+        font-size: 1.05rem;
+        line-height: 1.65;
+      }
+
+      p.lead {
+        color: var(--muted);
+        margin-top: 0;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .links {
+        margin-top: 28px;
+        padding: 20px 22px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.55);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <h1>Finanzen.net Last Visit Diff</h1>
+        <p class="lead">
+          Chrome extension for finanzen.net that shows portfolio changes since
+          the last snapshot or visit.
+        </p>
+
+        <p>
+          This page is used as the public information page for the extension.
+        </p>
+
+        <ul>
+          <li>compares current depot values with earlier local snapshots</li>
+          <li>adds per-position diffs directly to the depot table</li>
+          <li>stores snapshot data locally in the browser</li>
+        </ul>
+
+        <div class="links">
+          <p><strong>Links</strong></p>
+          <ul>
+            <li><a href="./privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="https://github.com/ZeBerti/finanzen-net-last-visit-diff">GitHub Repository</a></li>
+          </ul>
+        </div>
+      </article>
+    </main>
+  </body>
+</html>
