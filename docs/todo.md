@@ -7,6 +7,8 @@
 ## Projekt
 - Extension fuer den Chrome Web Store vorbereiten und veroeffentlichen.
 - Store-Metadaten finalisieren: Beschreibung, Screenshots, Privacy-Link und Upload-Paket.
+- Screenshots fuer den Chrome Web Store erstellen.
+- Privacy-Policy-Link mit oeffentlicher URL bereitstellen.
 
 ## Technik
 - `content.js` weiter aufteilen: Header-Rendering, Snapshot-Logik und Message-Handling staerker trennen.

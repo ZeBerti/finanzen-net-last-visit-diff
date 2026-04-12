@@ -2,6 +2,7 @@
   "name": "finanzen-dotnet-diff",
   "private": true,
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "build:release": "bash scripts/build-release.sh"
   }
 }
